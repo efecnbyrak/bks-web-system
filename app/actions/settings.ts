@@ -100,8 +100,8 @@ export async function advanceWeek() {
 
         await db.systemSetting.upsert({
             where: { key: "LAST_WEEK_ROLLOVER_DATE" },
-            create: { key: "LAST_WEEK_ROLLOVER_DATE", value: mondayThreshold.toISOString() },
-            update: { value: mondayThreshold.toISOString() }
+            create: { key: "LAST_WEEK_ROLLOVER_DATE", value: mondayThreshold.toISOString().split('T')[0] },
+            update: { value: mondayThreshold.toISOString().split('T')[0] }
         });
 
         // Ensure it's a string YYYY-MM-DD or ISO

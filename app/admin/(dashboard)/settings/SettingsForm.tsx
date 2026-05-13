@@ -37,13 +37,14 @@ export function SettingsForm({
         setLoading(true);
         const formData = new FormData(e.currentTarget);
 
+        const targetChanged = targetDateVal !== (initialTargetDate ? new Date(initialTargetDate).toISOString().split('T')[0] : "");
         const settings = [
             { key: "AVAILABILITY_MODE", value: formData.get("mode") as string },
             { key: "CURRENT_SEASON", value: formData.get("season") as string },
             { key: "CURRENT_WEEK_NUMBER", value: weekNumberVal },
             { key: "AVAILABILITY_TARGET_DATE", value: new Date(targetDateVal).toISOString() },
             { key: "IBAN_COLLECTION_ENABLED", value: String(ibanRequiredVal) },
-            { key: "AVAILABILITY_TARGET_MANUAL", value: "true" },
+            ...(targetChanged ? [{ key: "AVAILABILITY_TARGET_MANUAL", value: "true" }] : []),
         ];
 
         const result = await updateSystemSettingsBatch(settings);

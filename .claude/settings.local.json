@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-ChildItem -Path \"E:\\\\Yazilim\\\\BKS\\\\\" | Select-Object Name, PSIsContainer | Format-Table -AutoSize)",
+      "Bash(Add-Content -Path 'E:\\\\Yazilim\\\\BKS\\\\web.txt' -Value '2026-05-11 00:00 - Otomatik session log sistemi kuruldu: web.txt ve mobile.txt oluşturuldu, CLAUDE.md talimatları eklendi' -Encoding UTF8)"
+    ]
+  }
+}

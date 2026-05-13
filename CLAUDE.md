@@ -95,3 +95,9 @@ Match assignments for each user are cached in `User.matchStore` (JSON column) vi
 - **`export const dynamic = 'force-dynamic'`** — add to any page that reads live DB data and must not be cached.
 - **Server components** use `async/await` directly. Client components are marked `"use client"` and use hooks + server actions for mutations.
 - **Tailwind** — project uses Tailwind v4 with `@tailwindcss/postcss`. Class order doesn't matter but dark mode classes (`dark:`) are used throughout.
+
+## Session Log
+Her oturum sonunda, o oturumda yapılan işi özetleyen bir satırı `E:\Yazilim\BKS\web.txt` dosyasına append et. Format:
+`YYYY-MM-DD HH:MM - Konu`
+Örnek: `2026-05-11 14:35 - Settings sayfasına SMTP test butonu eklendi`
+Dosyayı asla okuma. Sadece PowerShell `Add-Content -Path 'E:\Yazilim\BKS\web.txt' -Value '...' -Encoding UTF8` ile ekle.
