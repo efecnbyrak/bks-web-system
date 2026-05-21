@@ -290,7 +290,7 @@ export function AdminLayoutClient({ children, role, imageUrl }: AdminLayoutClien
             </aside>
 
             {/* Mobile Bottom Nav Bar */}
-            <nav className="fixed bottom-0 inset-x-0 z-40 md:hidden bg-zinc-900 border-t border-zinc-800">
+            <nav className="fixed bottom-0 inset-x-0 z-[100] md:hidden bg-zinc-900 border-t border-zinc-800">
                 <div className="flex items-stretch h-16">
                     <Link href="/admin" prefetch={false} className={bottomItem(isActive("/admin") && pathname === "/admin")}>
                         <LayoutDashboard className="w-5 h-5" />
@@ -325,11 +325,11 @@ export function AdminLayoutClient({ children, role, imageUrl }: AdminLayoutClien
 
             {/* Drawer Overlay */}
             {isMoreOpen && (
-                <div className="fixed inset-0 bg-black/60 z-50 md:hidden backdrop-blur-sm" onClick={() => setIsMoreOpen(false)} />
+                <div className="fixed inset-0 bg-black/60 z-[110] md:hidden backdrop-blur-sm" onClick={() => setIsMoreOpen(false)} />
             )}
 
             {/* Bottom Drawer */}
-            <div className={`fixed inset-x-0 bottom-0 z-50 md:hidden bg-zinc-900 border-t border-zinc-800 rounded-t-2xl shadow-2xl transform transition-transform duration-300 ease-in-out ${isMoreOpen ? "translate-y-0" : "translate-y-full"}`}>
+            <div className={`fixed inset-x-0 bottom-0 z-[110] md:hidden bg-zinc-900 border-t border-zinc-800 rounded-t-2xl shadow-2xl transform transition-transform duration-300 ease-in-out ${isMoreOpen ? "translate-y-0" : "translate-y-full"}`}>
                 <div className="flex justify-center pt-3 pb-1">
                     <div className="w-10 h-1 bg-zinc-600 rounded-full" />
                 </div>
