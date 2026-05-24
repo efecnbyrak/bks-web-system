@@ -600,33 +600,3 @@ export async function updateAdminAvatar(formData: FormData) {
         return { error: e.message || "Fotoğraf yüklenemedi." };
     }
 }
-
-export async function triggerPasswordReset(userId: number): Promise<{ success: boolean; error?: string }> {
-    const session = await verifySession();
-    if (session.role !== "SUPER_ADMIN") {
-        return { success: false, error: "Bu işlem için Süper Admin yetkisi gereklidir." };
-    }
-
-    try {
-        await db.user.update({
-            where: { id: userId },
-            data: { passwordResetRequired: true }
-        });
-
-        await db.auditLog.create({
-            data: {
-                userId: session.userId,
-                action: "ADMIN_FORCED_PASSWORD_RESET",
-                details: `Admin ${session.userId} triggered forced password reset for user ${userId}`,
-                targetId: userId
-            }
-        });
-
-        revalidatePath("/admin/referees");
-        revalidatePath("/admin/manage-admins");
-        return { success: true };
-    } catch (e: any) {
-        console.error("triggerPasswordReset error:", e);
-        return { success: false, error: e.message || "Şifre sıfırlama tetiklenemedi." };
-    }
-}
