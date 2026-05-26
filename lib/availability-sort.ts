@@ -22,6 +22,17 @@ export const SHORT_CLASSIFICATION_LABEL: Record<string, string> = {
     "FIBA Hakemi":  "FIBA",
 };
 
+const REGION_ORDER: Record<string, number> = {
+    "Avrupa":  0,
+    "BGM":     1,
+    "Anadolu": 2,
+};
+
+function primaryRegionPriority(ref: any): number {
+    const regions: string[] = (ref?.regions ?? []).map((r: any) => r.name);
+    return regions.reduce((min, r) => Math.min(min, REGION_ORDER[r] ?? 99), 99);
+}
+
 export function sortForms(forms: any[], group: "REFEREE" | "GENERAL"): any[] {
     return [...forms].sort((a, b) => {
         const refA = a.referee || a.official;
@@ -33,13 +44,11 @@ export function sortForms(forms: any[], group: "REFEREE" | "GENERAL"): any[] {
             if (classA !== classB) return classA - classB;
         }
 
-        const lastA = (refA?.lastName || "").toLocaleUpperCase("tr-TR");
-        const lastB = (refB?.lastName || "").toLocaleUpperCase("tr-TR");
-        const lastCmp = lastA.localeCompare(lastB, "tr-TR");
-        if (lastCmp !== 0) return lastCmp;
+        const regionCmp = primaryRegionPriority(refA) - primaryRegionPriority(refB);
+        if (regionCmp !== 0) return regionCmp;
 
-        const firstA = (refA?.firstName || "").toLocaleUpperCase("tr-TR");
-        const firstB = (refB?.firstName || "").toLocaleUpperCase("tr-TR");
-        return firstA.localeCompare(firstB, "tr-TR");
+        const nameA = `${refA?.firstName || ""} ${refA?.lastName || ""}`.trim().toLocaleUpperCase("tr-TR");
+        const nameB = `${refB?.firstName || ""} ${refB?.lastName || ""}`.trim().toLocaleUpperCase("tr-TR");
+        return nameA.localeCompare(nameB, "tr-TR");
     });
 }
