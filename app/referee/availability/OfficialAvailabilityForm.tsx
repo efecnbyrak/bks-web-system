@@ -109,7 +109,7 @@ export function OfficialAvailabilityForm({ referee, days, existingForm, isLocked
 
             {/* Kaydet Sonrası Özet (en üstte) */}
             {isSubmittedLocked && !isLocked && savedDays && savedDays.length > 0 && (
-                <div className="mb-2 bg-green-50 dark:bg-green-950/30 border-2 border-green-200 dark:border-green-800 rounded-3xl p-6 shadow-sm animate-in fade-in slide-in-from-top-2 duration-500">
+                <div className="mb-2 relative z-50 bg-green-50 dark:bg-green-950/30 border-2 border-green-200 dark:border-green-800 rounded-3xl p-6 shadow-sm animate-in fade-in slide-in-from-top-2 duration-500">
                     <div className="flex items-start gap-3 mb-5">
                         <div className="w-10 h-10 bg-green-600 rounded-2xl flex items-center justify-center shrink-0 shadow-md shadow-green-600/20">
                             <CalendarCheck className="w-5 h-5 text-white" />
@@ -130,7 +130,7 @@ export function OfficialAvailabilityForm({ referee, days, existingForm, isLocked
                             <span className="text-xs font-bold uppercase">Gönderildi</span>
                         </div>
                     </div>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                         {savedDays.map((day, idx) => (
                             <div
                                 key={idx}

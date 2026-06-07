@@ -56,7 +56,7 @@ export async function GET(req: Request) {
             await db.announcement.create({
                 data: {
                     subject: "📢 Uygunluk Formu Açıldı",
-                    content: "Önümüzdeki hafta için uygunluk formunuz an itibariyle sisteme açılmıştır.\nLütfen en geç Salı günü saat 20:30'a kadar uygunluk durumunuzu sisteme giriniz.",
+                    content: "<p>Önümüzdeki hafta için uygunluk formunuz an itibariyle sisteme açılmıştır.</p><p>Lütfen en geç <strong>Salı günü saat 20:30'a</strong> kadar uygunluk durumunuzu sisteme giriniz.</p>",
                     target: "ALL",
                     sentCount: allUsers.length
                 }
