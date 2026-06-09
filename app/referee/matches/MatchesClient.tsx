@@ -103,7 +103,7 @@ type FilterMode = "all" | "played" | "upcoming" | "okul" | "ozel" | "hafta";
 
 export function MatchesClient({ firstName, lastName, initialMatches = [], initialLastSync = null, initialPersonnelPhones = {} }: MatchesClientProps) {
     const [allMatches, setAllMatches] = useState<MatchData[]>(() => dedupeMatches(initialMatches));
-    const [personnelPhones, setPersonnelPhones] = useState<Record<string, string>>(initialPersonnelPhones);
+    const [personnelPhones] = useState<Record<string, string>>(initialPersonnelPhones);
     const [loading, setLoading] = useState(initialMatches.length === 0);
     const [refreshing, setRefreshing] = useState(false);
     const [refreshSuccess, setRefreshSuccess] = useState(false);
@@ -112,16 +112,8 @@ export function MatchesClient({ firstName, lastName, initialMatches = [], initia
     const [selectedHafta, setSelectedHafta] = useState<number | null>(null);
     const [expandedMatch, setExpandedMatch] = useState<number | null>(null);
     const [lastSync, setLastSync] = useState<string | null>(initialLastSync);
-    const [fromCache, setFromCache] = useState(initialMatches.length > 0);
     const [visibleCount, setVisibleCount] = useState(30);
     const filterSectionRef = useRef<HTMLDivElement>(null);
-
-    // Archive scanning state
-    const [archiveStatus, setArchiveStatus] = useState<string>("");
-    const [archiveScanning, setArchiveScanning] = useState(false);
-    const [archiveComplete, setArchiveComplete] = useState(false);
-    const archiveScanRef = useRef(false);
-    const backgroundRefreshRef = useRef(false);
 
     // Filter states
     const [searchQuery, setSearchQuery] = useState("");
@@ -133,62 +125,30 @@ export function MatchesClient({ firstName, lastName, initialMatches = [], initia
     const [downloading, setDownloading] = useState(false);
 
     // ============================================================
-    // Load matches (current season)
+    // Load matches from DB-backed API
     // ============================================================
     const loadMatches = useCallback(async (forceRefresh = false) => {
         if (forceRefresh) {
             setRefreshing(true);
-            // Don't reset archiveScanRef — server handles which seasons need re-scanning
-            // Old seasons stay cached, only current season archive is re-scanned
         } else {
-            // Only show full-page loading if we truly have NO cached data
-            setLoading((prevMatches: boolean | ((prevState: boolean) => boolean)) => {
-                // We use functional update or check current length.
-                // But inside useCallback without allMatches dependency, we can't safely read allMatches directly unless we add it.
-                // However, since loadMatches is called on mount, if initialMatches > 0, loading is already false.
-                return false;
-            });
-            // Actually, we can just check if we need to load at all. 
-            // The useEffect handles the first load. If we have initialMatches, we ALREADY triggered backgroundRefreshRef in the constructor basically? No.
+            setLoading(true);
         }
         setError("");
 
         try {
-            const url = forceRefresh ? "/api/matches?refresh=true" : "/api/matches";
-            const res = await fetch(url);
+            const res = await fetch("/api/matches");
             const data = await res.json();
 
             if (res.ok) {
                 setAllMatches(dedupeMatches(data.matches || []));
                 setLastSync(data.lastSync || null);
-                setFromCache(data.fromCache || false);
-                if (data.personnelPhones) {
-                    setPersonnelPhones(data.personnelPhones);
-                }
-
-                // Trigger archive scan if there are pending seasons
-                if (data.pendingSeasons && data.pendingSeasons.length > 0 && !archiveScanRef.current) {
-                    archiveScanRef.current = true;
-                    scanArchiveSeasons(data.pendingSeasons);
-                } else if (!data.pendingSeasons || data.pendingSeasons.length === 0) {
-                    setArchiveComplete(true);
-                }
-
-                // AUTO-REFRESH: If data came from cache, trigger background refresh
-                // User sees cached data instantly while fresh data loads silently
-                if (data.fromCache && !forceRefresh && !backgroundRefreshRef.current) {
-                    backgroundRefreshRef.current = true;
-                    triggerBackgroundRefresh();
-                }
             } else {
                 setError(data.error || "Maç verileri yüklenemedi.");
             }
-        } catch (e: any) {
+        } catch {
             setError("Bağlantı hatası. Lütfen tekrar deneyin.");
         } finally {
-            if (!forceRefresh) {
-                setLoading(false);
-            }
+            setLoading(false);
             if (forceRefresh) {
                 setRefreshing(false);
                 setRefreshSuccess(true);
@@ -197,76 +157,11 @@ export function MatchesClient({ firstName, lastName, initialMatches = [], initia
         }
     }, []);
 
-    // ============================================================
-    // Scan archive seasons one by one
-    // ============================================================
-    const scanArchiveSeasons = useCallback(async (seasons: string[]) => {
-        setArchiveScanning(true);
-
-        for (let i = 0; i < seasons.length; i++) {
-            const season = seasons[i];
-            setArchiveStatus(`Arşiv taranıyor: ${season} (${i + 1}/${seasons.length})`);
-
-            try {
-                const res = await fetch(`/api/matches?season=${encodeURIComponent(season)}`);
-                const data = await res.json();
-
-                if (res.ok && data.matches) {
-                    setAllMatches(dedupeMatches(data.matches));
-                    if (data.newMatchesFound > 0) {
-                        setLastSync(data.lastSync);
-                    }
-                }
-            } catch (e) {
-                console.error(`Archive scan error for ${season}:`, e);
-            }
-        }
-
-        setArchiveScanning(false);
-        setArchiveComplete(true);
-        setArchiveStatus("");
-    }, []);
-
-    // ============================================================
-    // Background refresh — silently update when loading from cache
-    // ============================================================
-    const triggerBackgroundRefresh = useCallback(async () => {
-        try {
-            setRefreshing(true); // Show the refresh indicator to the user
-            // Silently refresh current season
-            const res = await fetch("/api/matches?refresh=true");
-            const data = await res.json();
-
-            if (res.ok && data.matches) {
-                setAllMatches(dedupeMatches(data.matches));
-                setLastSync(data.lastSync);
-                setFromCache(false);
-                if (data.personnelPhones) {
-                    setPersonnelPhones(data.personnelPhones);
-                }
-
-                // After current season refresh, scan archive too
-                if (data.pendingSeasons && data.pendingSeasons.length > 0) {
-                    archiveScanRef.current = true;
-                    scanArchiveSeasons(data.pendingSeasons);
-                }
-            }
-        } catch (e) {
-            console.error("Background refresh failed:", e);
-        } finally {
-            setRefreshing(false);
-        }
-    }, [scanArchiveSeasons]);
-
-    // On mount, if we received initial matches from the server, we should trigger the background refresh immediately!
     useEffect(() => {
-        if (initialMatches && initialMatches.length > 0 && !backgroundRefreshRef.current) {
-            backgroundRefreshRef.current = true;
-            triggerBackgroundRefresh();
-        } else if (!initialMatches || initialMatches.length === 0) {
+        if (!initialMatches || initialMatches.length === 0) {
             loadMatches();
         }
-    }, [loadMatches, initialMatches, triggerBackgroundRefresh]);
+    }, []);
 
     // ============================================================
     // Computed values
@@ -951,7 +846,7 @@ export function MatchesClient({ firstName, lastName, initialMatches = [], initia
                         <Loader2 className="w-10 h-10 text-red-600 animate-spin" />
                         <div className="text-center">
                             <p className="text-zinc-700 dark:text-zinc-300 font-bold">Maçlar Yükleniyor</p>
-                            <p className="text-zinc-400 text-xs mt-1">Google Drive&apos;dan veriler okunuyor...</p>
+                            <p className="text-zinc-400 text-xs mt-1">Veriler yükleniyor...</p>
                         </div>
                     </div>
                 </div>
@@ -988,8 +883,7 @@ export function MatchesClient({ firstName, lastName, initialMatches = [], initia
                         <h1 className="text-xl font-black text-zinc-900 dark:text-white">Maçlarım</h1>
                         <p className="text-zinc-500 text-[11px] font-bold">
                             {allMatches.length} Maç Bulundu {lastSyncDisplay && <span className="text-zinc-400">- {lastSyncDisplay} tarihinde Son Güncelleme</span>}
-                            {fromCache && <span className="ml-1 text-green-500" title="Veri önbellekten hızlı yüklendi">⚡</span>}
-                        </p>
+                                            </p>
                     </div>
                 </div>
 
@@ -1015,7 +909,7 @@ export function MatchesClient({ firstName, lastName, initialMatches = [], initia
 
                     <button
                         onClick={() => loadMatches(true)}
-                        disabled={refreshing || archiveScanning}
+                        disabled={refreshing}
                         className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white rounded-xl text-sm font-bold shadow-lg shadow-red-600/20 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
                     >
                         <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
@@ -1023,25 +917,6 @@ export function MatchesClient({ firstName, lastName, initialMatches = [], initia
                     </button>
                 </div>
             </div>
-
-            {/* Archive scanning indicator */}
-            {archiveScanning && (
-                <div className="p-3 bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-800 rounded-xl flex items-center gap-3">
-                    <Archive className="w-5 h-5 text-violet-600 shrink-0 animate-pulse" />
-                    <div className="flex-1">
-                        <p className="text-violet-700 dark:text-violet-400 text-sm font-bold">{archiveStatus}</p>
-                        <p className="text-violet-400 text-xs">Arka planda eski sezonlar taranıyor, sayfayı kapatmayın...</p>
-                    </div>
-                    <Loader2 className="w-4 h-4 text-violet-500 animate-spin shrink-0" />
-                </div>
-            )}
-
-            {archiveComplete && !archiveScanning && allMatches.length > 0 && (
-                <div className="p-2.5 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-xl flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                    <p className="text-emerald-600 text-xs font-medium">Tüm sezonlar tarandı — {allMatches.length} maç bulundu</p>
-                </div>
-            )}
 
             {/* Error */}
             {error && (
@@ -1159,7 +1034,7 @@ export function MatchesClient({ firstName, lastName, initialMatches = [], initia
             )}
 
             {/* Empty */}
-            {allMatches.length === 0 && !error && !archiveScanning && (
+            {allMatches.length === 0 && !error && !loading && (
                 <div className="flex flex-col items-center py-16 text-center bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl">
                     <Trophy className="w-12 h-12 text-zinc-300 dark:text-zinc-600 mb-4" />
                     <h3 className="text-xl font-black text-zinc-600 dark:text-zinc-400">Maç Bulunamadı</h3>

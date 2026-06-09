@@ -1,8 +1,6 @@
 import { verifySession } from "@/lib/session";
 import { db } from "@/lib/db";
 import { MatchesClient } from "@/app/referee/matches/MatchesClient";
-import { getUserMatchesStore } from "@/lib/matches-store";
-import { nameMatches } from "@/lib/match-parser";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +15,13 @@ function normalizeNameStr(first: string, last: string) {
 export default async function GeneralMatchesPage() {
     const session = await verifySession();
 
-    const [user, cachedStore] = await Promise.all([
+    const [assignments, syncState, user] = await Promise.all([
+        db.userMatchAssignment.findMany({
+            where: { userId: session.userId },
+            include: { match: true },
+            orderBy: { match: { tarihDate: "desc" } },
+        }),
+        db.workerSyncState.findUnique({ where: { folderKey: "current" } }),
         db.user.findUnique({
             where: { id: session.userId },
             select: {
@@ -25,13 +29,13 @@ export default async function GeneralMatchesPage() {
                 official: { select: { firstName: true, lastName: true } }
             },
         }),
-        getUserMatchesStore(session.userId).catch(() => null),
     ]);
 
     const firstName = user?.referee?.firstName || user?.official?.firstName || "";
     const lastName = user?.referee?.lastName || user?.official?.lastName || "";
 
-    if (!nameMatches("Efe Can Bayrak", firstName, lastName)) {
+    const fullName = `${firstName} ${lastName}`.toUpperCase().trim();
+    if (fullName !== "EFE CAN BAYRAK") {
         return (
             <div className="flex flex-col items-center justify-center min-h-[60vh] px-4">
                 <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-2xl p-10 max-w-md w-full text-center shadow-sm">
@@ -43,7 +47,24 @@ export default async function GeneralMatchesPage() {
         );
     }
 
-    const matches = cachedStore?.matches || [];
+    const matches = assignments.map(a => ({
+        mac_adi: a.match.macAdi,
+        tarih: a.match.tarih,
+        saat: a.match.saat ?? undefined,
+        salon: a.match.salon ?? undefined,
+        kategori: a.match.kategori,
+        hafta: a.match.hafta ?? undefined,
+        sezon: a.match.sezon ?? undefined,
+        ligTuru: a.match.ligTuru,
+        hakemler: a.match.hakemler,
+        masa_gorevlileri: a.match.masaGorevlileri,
+        saglikcilar: a.match.saglikcilar,
+        istatistikciler: a.match.istatistikciler,
+        gozlemciler: a.match.gozlemciler,
+        sahaKomiserleri: a.match.sahaKomiserleri,
+        kaynak_dosya: a.match.kaynakDosya,
+    }));
+
     const personnelPhones: Record<string, string> = {};
 
     if (matches.length > 0) {
@@ -84,7 +105,7 @@ export default async function GeneralMatchesPage() {
             firstName={firstName}
             lastName={lastName}
             initialMatches={matches}
-            initialLastSync={cachedStore?.lastSync || null}
+            initialLastSync={syncState?.lastSuccessAt?.toISOString() ?? null}
             initialPersonnelPhones={personnelPhones}
         />
     );

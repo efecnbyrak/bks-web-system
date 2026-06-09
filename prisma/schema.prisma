@@ -54,6 +54,7 @@ model User {
   observerReports  ObserverReport[]
   createdAssignments ExamAssignment[]
   announcementReads AnnouncementRead[]
+  userMatchAssignments UserMatchAssignment[]
 
   @@index([id])
   @@index([username])
@@ -530,4 +531,106 @@ model GameAssignment {
   @@index([tarih])
   @@index([tarih, aTeam, bTeam])
   @@map("game_assignments")
+}
+
+// ─── bks-bot worker tabloları ────────────────────────────────────────────────
+
+model DriveFile {
+  id               Int      @id @default(autoincrement())
+  driveFileId      String   @unique
+  driveFolderKey   String
+  fileName         String
+  mimeType         String
+  resourceKey      String?
+  md5Checksum      String?
+  modifiedTime     DateTime?
+  lastProcessedAt  DateTime?
+  lastProcessedMd5 String?
+  rowCount         Int      @default(0)
+  parseError       String?  @db.Text
+  isActive         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  parsedMatches    ParsedMatch[]
+
+  @@index([driveFolderKey])
+  @@index([isActive, driveFolderKey])
+  @@map("drive_files")
+}
+
+model ParsedMatch {
+  id              Int       @id @default(autoincrement())
+  matchKey        String    @unique
+  macAdi          String
+  tarih           String
+  tarihDate       DateTime?
+  saat            String?
+  salon           String?
+  kategori        String
+  hafta           Int?
+  sezon           String?
+  ligTuru         String
+  hakemler        String[]
+  masaGorevlileri String[]
+  saglikcilar     String[]
+  istatistikciler String[]
+  gozlemciler     String[]
+  sahaKomiserleri String[]
+  kaynakDosya     String
+  driveFileId     Int
+  driveFile       DriveFile @relation(fields: [driveFileId], references: [id], onDelete: Cascade)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  userAssignments UserMatchAssignment[]
+
+  @@index([tarihDate])
+  @@index([sezon])
+  @@index([driveFileId])
+  @@map("parsed_matches")
+}
+
+model UserMatchAssignment {
+  id                Int         @id @default(autoincrement())
+  userId            Int
+  matchId           Int
+  role              String
+  nameInSpreadsheet String
+  user              User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  match             ParsedMatch @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  @@unique([userId, matchId])
+  @@index([userId])
+  @@map("user_match_assignments")
+}
+
+model WorkerSyncLog {
+  id               Int      @id @default(autoincrement())
+  syncType         String
+  folderKey        String
+  filesChecked     Int      @default(0)
+  filesChanged     Int      @default(0)
+  matchesUpserted  Int      @default(0)
+  assignmentsBuilt Int      @default(0)
+  durationMs       Int      @default(0)
+  errors           String[]
+  startedAt        DateTime @default(now())
+  completedAt      DateTime?
+
+  @@index([startedAt])
+  @@map("worker_sync_logs")
+}
+
+model WorkerSyncState {
+  folderKey         String    @id
+  lastSyncAt        DateTime?
+  lastSuccessAt     DateTime?
+  consecutiveErrors Int       @default(0)
+  isLocked          Boolean   @default(false)
+  lockExpiresAt     DateTime?
+
+  @@map("worker_sync_state")
 }
