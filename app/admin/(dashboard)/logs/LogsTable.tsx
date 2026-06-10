@@ -65,7 +65,7 @@ export function LogsTable({ logs }: LogsTableProps) {
     }
 
     return (
-        <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
+        <div className="divide-y divide-zinc-100 dark:divide-zinc-800 overflow-x-auto">
             {logs.map((log) => {
                 const profile = log.user?.referee || log.user?.official;
                 const displayName = profile
@@ -94,8 +94,8 @@ export function LogsTable({ logs }: LogsTableProps) {
                             </div>
 
                             {/* İşlem */}
-                            <div className="px-4 py-4 w-52 shrink-0">
-                                <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${getActionColor(log.action)}`}>
+                            <div className="px-4 py-4 w-40 md:w-52 shrink-0">
+                                <span className={`px-2 md:px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${getActionColor(log.action)}`}>
                                     {log.action}
                                 </span>
                             </div>
@@ -107,14 +107,14 @@ export function LogsTable({ logs }: LogsTableProps) {
                                         <UserIcon className="w-4 h-4 text-zinc-400" />
                                     </div>
                                     <div className="min-w-0">
-                                        <p className="text-zinc-900 dark:text-zinc-100 truncate max-w-[150px]">{displayName}</p>
+                                        <p className="text-zinc-900 dark:text-zinc-100 truncate max-w-[120px] md:max-w-[150px]">{displayName}</p>
                                         <p className="text-[10px] text-zinc-500 font-bold">UID: {log.userId || "-"}</p>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Detay özeti */}
-                            <div className="px-4 py-4 w-64 shrink-0 text-zinc-500 dark:text-zinc-400 italic text-sm truncate">
+                            {/* Detay özeti — md+ only */}
+                            <div className="hidden md:block px-4 py-4 w-64 shrink-0 text-zinc-500 dark:text-zinc-400 italic text-sm truncate">
                                 {log.details ? (
                                     <span className="text-[12px]">{raw.length > 60 ? raw.substring(0, 60) + "…" : raw}</span>
                                 ) : (
@@ -122,8 +122,8 @@ export function LogsTable({ logs }: LogsTableProps) {
                                 )}
                             </div>
 
-                            {/* IP */}
-                            <div className="px-4 py-4 w-40 shrink-0">
+                            {/* IP — lg+ only */}
+                            <div className="hidden lg:block px-4 py-4 w-40 shrink-0">
                                 <div className="flex items-center gap-2 text-zinc-500">
                                     <Globe className="w-3 h-3 text-zinc-400 shrink-0" />
                                     <span className="font-mono text-xs">{log.ipAddress || "Bilinmiyor"}</span>
@@ -131,8 +131,8 @@ export function LogsTable({ logs }: LogsTableProps) {
                             </div>
 
                             {/* Tarih */}
-                            <div className="px-4 py-4 w-36 shrink-0">
-                                <div className="flex items-center gap-2 text-zinc-500">
+                            <div className="px-4 py-4 w-28 md:w-36 shrink-0">
+                                <div className="flex items-center gap-1 md:gap-2 text-zinc-500">
                                     <Clock className="w-3 h-3 text-zinc-400 shrink-0" />
                                     <span className="text-[10px] font-bold">
                                         {new Date(log.createdAt).toLocaleString("tr-TR", {

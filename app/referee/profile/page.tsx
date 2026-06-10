@@ -19,7 +19,7 @@ export default async function RefereeProfileDashboard() {
                 <p className="text-zinc-500 mt-2">Güncel durumun ve bildirimlerin</p>
             </header>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
                 {/* Main Content Column */}
                 <div className="md:col-span-2 space-y-8">

@@ -290,7 +290,7 @@ export function AdminLayoutClient({ children, role, imageUrl }: AdminLayoutClien
             </aside>
 
             {/* Mobile Bottom Nav Bar */}
-            <nav className="fixed bottom-0 inset-x-0 z-[100] md:hidden bg-zinc-900 border-t border-zinc-800">
+            <nav className="fixed bottom-0 inset-x-0 z-[100] md:hidden bg-zinc-900 border-t border-zinc-800" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
                 <div className="flex items-stretch h-16">
                     <Link href="/admin" prefetch={false} className={bottomItem(isActive("/admin") && pathname === "/admin")}>
                         <LayoutDashboard className="w-5 h-5" />
@@ -340,7 +340,7 @@ export function AdminLayoutClient({ children, role, imageUrl }: AdminLayoutClien
                     </button>
                 </div>
 
-                <div className="px-4 pb-8 space-y-1 overflow-y-auto max-h-[60vh]">
+                <div className="px-4 pb-8 space-y-1 overflow-y-auto max-h-[75vh]" style={{ paddingBottom: 'calc(2rem + env(safe-area-inset-bottom))' }}>
                     <Link href="/admin/officials" onClick={() => setIsMoreOpen(false)} prefetch={false} className={drawerLink(isActive("/admin/officials"))}>
                         <Briefcase className="w-4 h-4" />
                         Genel Görevliler
@@ -406,8 +406,8 @@ export function AdminLayoutClient({ children, role, imageUrl }: AdminLayoutClien
             </div>
 
             {/* Main Content */}
-            <main className="flex-1 md:pl-80 min-h-screen flex flex-col relative min-w-0 overflow-x-hidden">
-                <div className="flex-1 p-4 sm:p-6 md:p-10 lg:p-16 xl:p-24 pt-24 md:pt-16 pb-20 md:pb-0 w-full transition-all duration-500 min-w-0">
+            <main className="flex-1 md:pl-72 min-h-screen flex flex-col relative min-w-0 overflow-x-hidden">
+                <div className="flex-1 p-4 sm:p-6 md:p-8 lg:p-10 xl:p-12 pt-24 md:pt-10 pb-20 md:pb-0 w-full min-w-0">
                     <div className="max-w-[1400px] mx-auto w-full min-w-0">
                         {children}
                     </div>

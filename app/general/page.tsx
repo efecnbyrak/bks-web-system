@@ -422,7 +422,7 @@ export default async function GeneralDashboard() {
                             <p className="text-zinc-500 font-bold italic">Henüz atanmış bir maçınız bulunmamaktadır.</p>
                         </div>
                     ) : (
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             {upcomingMatches.map((assignment) => (
                                 <div key={assignment.id} className="bg-white dark:bg-zinc-900 rounded-[2.5rem] p-8 border border-zinc-100 dark:border-zinc-800 shadow-sm hover:shadow-xl transition-all group overflow-hidden relative">
                                     <div className="absolute top-0 right-0 w-32 h-32 bg-red-600/5 rounded-full blur-3xl" />

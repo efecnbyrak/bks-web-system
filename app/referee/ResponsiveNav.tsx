@@ -376,7 +376,7 @@ export function ResponsiveNav({ refereeName, roleType, basePath = "/referee", ti
             </aside>
 
             {/* Mobile Bottom Nav Bar */}
-            <nav className="fixed bottom-0 inset-x-0 z-[100] md:hidden bg-white dark:bg-zinc-900 border-t dark:border-zinc-800">
+            <nav className="fixed bottom-0 inset-x-0 z-[100] md:hidden bg-white dark:bg-zinc-900 border-t dark:border-zinc-800" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
                 <div className="flex items-stretch h-16">
                     {basePath !== "/admin" ? (
                         <>
@@ -464,7 +464,7 @@ export function ResponsiveNav({ refereeName, roleType, basePath = "/referee", ti
                     </button>
                 </div>
 
-                <div className="px-4 pb-8 space-y-1 overflow-y-auto max-h-[60vh]">
+                <div className="px-4 pb-8 space-y-1 overflow-y-auto max-h-[75vh]" style={{ paddingBottom: 'calc(2rem + env(safe-area-inset-bottom))' }}>
                     {basePath !== "/admin" ? (
                         <>
                             {canSeeMatches && (
