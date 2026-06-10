@@ -9,29 +9,33 @@ export default async function UserMatchesPage() {
     const session = await verifySession();
     if (session.role !== "SUPER_ADMIN") redirect("/admin");
 
-    const users = await db.user.findMany({
-        where: {
-            OR: [
-                { referee: { isNot: null } },
-                { official: { isNot: null } },
-            ],
-        },
-        select: {
-            id: true,
-            matchStore: true,
-            referee: {
-                select: { firstName: true, lastName: true, imageUrl: true, classification: true },
+    const [users, syncState] = await Promise.all([
+        db.user.findMany({
+            where: {
+                OR: [
+                    { referee: { isNot: null } },
+                    { official: { isNot: null } },
+                ],
             },
-            official: {
-                select: { firstName: true, lastName: true, imageUrl: true, officialType: true },
+            select: {
+                id: true,
+                referee: {
+                    select: { firstName: true, lastName: true, imageUrl: true, classification: true },
+                },
+                official: {
+                    select: { firstName: true, lastName: true, imageUrl: true, officialType: true },
+                },
+                _count: {
+                    select: { userMatchAssignments: true },
+                },
             },
-        },
-        orderBy: { id: "asc" },
-    });
+            orderBy: { id: "asc" },
+        }),
+        db.workerSyncState.findUnique({ where: { folderKey: "current" } }),
+    ]);
 
     const userList = users.map((u) => {
         const profile = u.referee || u.official;
-        const store = u.matchStore as any;
         return {
             id: u.id,
             firstName: profile?.firstName || "",
@@ -40,8 +44,7 @@ export default async function UserMatchesPage() {
             isOfficial: !u.referee,
             officialType: (u.official as any)?.officialType || null,
             classification: (u.referee as any)?.classification || null,
-            matchCount: store?.matches?.length ?? 0,
-            lastSync: store?.lastSync ?? null,
+            matchCount: u._count.userMatchAssignments,
         };
     });
 
@@ -56,7 +59,7 @@ export default async function UserMatchesPage() {
                 </p>
             </header>
 
-            <UserMatchesClient users={userList} />
+            <UserMatchesClient users={userList} lastSync={syncState?.lastSuccessAt?.toISOString() ?? null} />
         </div>
     );
 }

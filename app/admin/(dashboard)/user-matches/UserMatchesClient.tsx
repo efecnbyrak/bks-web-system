@@ -24,11 +24,11 @@ interface UserItem {
     officialType: string | null;
     classification: string | null;
     matchCount: number;
-    lastSync: string | null;
 }
 
 interface UserMatchesClientProps {
     users: UserItem[];
+    lastSync: string | null;
 }
 
 const TR_MONTHS = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
@@ -194,13 +194,12 @@ function PersonnelRow({ icon, label, names, highlight }: { icon: React.ReactNode
     );
 }
 
-export function UserMatchesClient({ users }: UserMatchesClientProps) {
+export function UserMatchesClient({ users, lastSync }: UserMatchesClientProps) {
     const [search, setSearch] = useState("");
     const [selectedUser, setSelectedUser] = useState<UserItem | null>(null);
     const [matches, setMatches] = useState<MatchData[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [lastSync, setLastSync] = useState<string | null>(null);
     const [filter, setFilter] = useState<"all" | "upcoming" | "past">("all");
 
     const filtered = useMemo(() => {
@@ -221,9 +220,7 @@ export function UserMatchesClient({ users }: UserMatchesClientProps) {
             const res = await fetch(`/api/admin/user-matches?userId=${u.id}`);
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || "Hata");
-            const store = data.matchStore as any;
-            setMatches(store?.matches || []);
-            setLastSync(store?.lastSync || null);
+            setMatches(data.matches || []);
         } catch (e: any) {
             setError(e.message || "Bilinmeyen hata");
         } finally {
