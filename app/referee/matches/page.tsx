@@ -82,11 +82,11 @@ export default async function MatchesPage() {
         if (nameParts.length > 0) {
             const [referees, officials] = await Promise.all([
                 db.referee.findMany({
-                    where: { OR: nameParts.map(p => ({ firstName: p.firstName, lastName: p.lastName })) },
+                    where: { OR: nameParts.map(p => ({ firstName: { equals: p.firstName, mode: "insensitive" }, lastName: { equals: p.lastName, mode: "insensitive" } })) },
                     select: { firstName: true, lastName: true, phone: true }
                 }),
                 db.generalOfficial.findMany({
-                    where: { OR: nameParts.map(p => ({ firstName: p.firstName, lastName: p.lastName })) },
+                    where: { OR: nameParts.map(p => ({ firstName: { equals: p.firstName, mode: "insensitive" }, lastName: { equals: p.lastName, mode: "insensitive" } })) },
                     select: { firstName: true, lastName: true, phone: true }
                 }),
             ]);

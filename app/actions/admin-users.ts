@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { isValidTurkishIBAN } from "@/lib/iban-validator";
 import { put } from "@vercel/blob";
 import { getAvailabilityWindow } from "@/lib/availability-utils";
+import { logAction } from "@/lib/logger";
 
 export async function approveUser(userId: number) {
     const session = await verifySession();
@@ -30,6 +31,8 @@ export async function approveUser(userId: number) {
         );
     }
 
+    await logAction(session.userId, "USER_APPROVED", `Kullanıcı onaylandı. Hedef UID: ${userId}`, userId);
+
     revalidatePath("/admin/approvals");
     revalidatePath("/admin/referees");
     return { success: true };
@@ -50,6 +53,8 @@ export async function rejectUser(userId: number) {
         await tx.user.delete({ where: { id: userId } });
     });
 
+    await logAction(session.userId, "USER_REJECTED", `Kullanıcı başvurusu reddedildi ve silindi. Hedef UID: ${userId}`, userId);
+
     revalidatePath("/admin/approvals");
     return { success: true };
 }
@@ -64,6 +69,11 @@ export async function suspendUser(userId: number, until: Date | null) {
         where: { id: userId },
         data: { suspendedUntil: until }
     });
+
+    const detail = until
+        ? `Kullanıcı ${until.toLocaleDateString('tr-TR')} tarihine kadar askıya alındı. Hedef UID: ${userId}`
+        : `Kullanıcı askıdan kaldırıldı. Hedef UID: ${userId}`;
+    await logAction(session.userId, until ? "USER_SUSPENDED" : "USER_UNSUSPENDED", detail, userId);
 
     revalidatePath("/admin/referees");
     return { success: true };
@@ -444,6 +454,8 @@ export async function deleteUser(userId: number) {
             await tx.user.delete({ where: { id: userId } });
         });
 
+        await logAction(session.userId, "USER_DELETED", `Kullanıcı hesabı ve tüm verileri silindi. Hedef UID: ${userId}`, userId);
+
         revalidatePath("/admin/referees");
         revalidatePath("/admin/officials");
         revalidatePath("/admin/approvals");
@@ -489,6 +501,8 @@ export async function addPenalty(userId: number, data: {
         }
     }
 
+    await logAction(session.userId, "PENALTY_ADD", `Ceza eklendi. Tür: ${data.type}, Sebep: ${data.reason}. Hedef UID: ${userId}`, userId);
+
     revalidatePath("/admin/referees");
     return { success: true, penalty };
 }
@@ -503,6 +517,8 @@ export async function deletePenalty(penaltyId: number) {
     if (!penalty) throw new Error("Ceza bulunamadı.");
 
     await db.penalty.delete({ where: { id: penaltyId } });
+
+    await logAction(session.userId, "PENALTY_REMOVE", `Ceza silindi. Ceza ID: ${penaltyId}`, penalty.userId);
 
     revalidatePath("/admin/referees");
     return { success: true };

@@ -5,6 +5,7 @@ import { verifySession } from "@/lib/session";
 import { revalidatePath } from "next/cache";
 import { getAvailabilityWindow } from "@/lib/availability-utils";
 import { sendAvailabilityConfirmationEmail } from "@/lib/email";
+import { logAction } from "@/lib/logger";
 
 export interface ActionState {
     error?: string;
@@ -159,6 +160,8 @@ export async function saveAvailability(prevState: ActionState, formData: FormDat
         ]);
 
         revalidatePath("/referee/availability");
+
+        await logAction(userId, "AVAILABILITY_FORM_SUBMIT", `${profile.firstName} ${profile.lastName} uygunluk formu gönderdi. Hafta: ${startDate.toLocaleDateString('tr-TR')}`);
 
         // 3. Send confirmation email (non-blocking — don't fail if email fails)
         try {
