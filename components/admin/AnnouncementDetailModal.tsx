@@ -90,7 +90,10 @@ export function AnnouncementDetailModal({ announcement, onClose }: AnnouncementD
                                 </span>
                                 <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-red-100 dark:bg-red-900/20 text-red-600 rounded-lg text-[10px] font-black uppercase tracking-wider">
                                     <Users className="w-3.5 h-3.5" />
-                                    {announcement.target === 'ALL' ? 'TÜM KULLANICILAR' : announcement.target} ({announcement.sentCount} KİŞİ)
+                                    {announcement.target?.startsWith('SPECIFIC:')
+                                        ? `${announcement.target.replace('SPECIFIC:', '').split(',').filter(Boolean).length} Seçili Kişi`
+                                        : announcement.target === 'ALL' ? 'TÜM KULLANICILAR' : announcement.target
+                                    } ({announcement.sentCount} KİŞİ)
                                 </span>
                                 {!showReads && (
                                     <button onClick={handleShowReads} className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-lg text-[10px] font-black uppercase tracking-wider hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors">

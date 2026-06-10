@@ -1,4 +1,7 @@
+"use client";
+
 import { useActionState, useEffect, useState } from "react";
+import { Eye, EyeOff } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { KvkkModal } from "@/components/kvkk/KvkkModal";
 import { register, ActionState } from "@/app/actions/auth";
@@ -43,6 +46,8 @@ export function RegisterModal({ isOpen, onClose, onSwitchToLogin }: RegisterModa
     const [consent, setConsent] = useState(false);
     const [strengthData, setStrengthData] = useState(getPasswordStrength(""));
     const [kvkkModalOpen, setKvkkModalOpen] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
+    const [showPasswordConfirm, setShowPasswordConfirm] = useState(false);
 
     // Derived address string for the hidden input
     const fullAddress = `${city} / ${district} - ${details}`;
@@ -136,8 +141,9 @@ export function RegisterModal({ isOpen, onClose, onSwitchToLogin }: RegisterModa
                         <label className="block text-[10px] font-black uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-1 ml-1">
                             Şifre
                         </label>
+                        <div className="relative">
                         <input
-                            type="password"
+                            type={showPassword ? "text" : "password"}
                             name="password"
                             required
                             value={password}
@@ -146,9 +152,18 @@ export function RegisterModal({ isOpen, onClose, onSwitchToLogin }: RegisterModa
                                 setPassword(val);
                                 setStrengthData(getPasswordStrength(val));
                             }}
-                            className={`w-full px-4 py-4 border-2 rounded-2xl outline-none bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-white transition-all ${state.errors?.password ? 'border-red-500' : 'border-transparent focus:border-red-600'}`}
+                            className={`w-full px-4 pr-12 py-4 border-2 rounded-2xl outline-none bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-white transition-all ${state.errors?.password ? 'border-red-500' : 'border-transparent focus:border-red-600'}`}
                             placeholder="Şifre"
                         />
+                        <button
+                            type="button"
+                            onClick={() => setShowPassword(p => !p)}
+                            className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
+                            tabIndex={-1}
+                        >
+                            {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                        </div>
                         {/* Password Strength Indicator */}
                         {password && (
                             <div className="mt-2 space-y-1">
@@ -175,15 +190,25 @@ export function RegisterModal({ isOpen, onClose, onSwitchToLogin }: RegisterModa
                         <label className="block text-[10px] font-black uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-1 ml-1">
                             Şifre Tekrar
                         </label>
+                        <div className="relative">
                         <input
-                            type="password"
+                            type={showPasswordConfirm ? "text" : "password"}
                             name="passwordConfirm"
                             required
                             value={passwordConfirm}
                             onChange={(e) => setPasswordConfirm(e.target.value)}
-                            className={`w-full px-4 py-4 border-2 rounded-2xl outline-none bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-white transition-all ${passwordsMismatch ? 'border-red-500' : 'border-transparent focus:border-red-600'}`}
+                            className={`w-full px-4 pr-12 py-4 border-2 rounded-2xl outline-none bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-white transition-all ${passwordsMismatch ? 'border-red-500' : 'border-transparent focus:border-red-600'}`}
                             placeholder="Tekrar"
                         />
+                        <button
+                            type="button"
+                            onClick={() => setShowPasswordConfirm(p => !p)}
+                            className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
+                            tabIndex={-1}
+                        >
+                            {showPasswordConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                        </div>
                         {passwordsMismatch && (
                             <p className="text-red-500 text-[10px] font-bold mt-1 ml-1 uppercase">Şifreler eşleşmiyor.</p>
                         )}

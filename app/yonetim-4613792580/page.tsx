@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { login, verify2FA } from "@/app/actions/auth";
 import Link from "next/link";
-import { Loader2, ShieldCheck, AlertCircle, Globe } from "lucide-react";
+import { Loader2, ShieldCheck, AlertCircle, Globe, Eye, EyeOff } from "lucide-react";
 
 export default function AdminLoginPage() {
     const [isLoading, setIsLoading] = useState(false);
@@ -13,6 +13,7 @@ export default function AdminLoginPage() {
     const [userId, setUserId] = useState<number | null>(null);
     const [twoFACode, setTwoFACode] = useState("");
     const [isPending, startTransition] = useTransition();
+    const [showPassword, setShowPassword] = useState(false);
     const router = useRouter();
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -95,12 +96,22 @@ export default function AdminLoginPage() {
                                 <label className="block text-sm font-medium text-zinc-400 mb-2">
                                     Şifre
                                 </label>
-                                <input
-                                    type="password"
-                                    name="password"
-                                    className="w-full bg-zinc-950 border border-zinc-700 text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-red-600 transition-all"
-                                    placeholder="Şifrenizi girin"
-                                />
+                                <div className="relative">
+                                    <input
+                                        type={showPassword ? "text" : "password"}
+                                        name="password"
+                                        className="w-full bg-zinc-950 border border-zinc-700 text-white rounded-lg px-4 pr-12 py-3 focus:outline-none focus:ring-2 focus:ring-red-600 transition-all"
+                                        placeholder="Şifrenizi girin"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPassword(p => !p)}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors"
+                                        tabIndex={-1}
+                                    >
+                                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                    </button>
+                                </div>
                             </div>
 
                             {error && (

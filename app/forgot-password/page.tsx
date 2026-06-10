@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { getUserSecurityQuestion, resetPasswordWithSecurityQuestion, resetPasswordWithRecoveryCode } from "@/app/actions/auth";
-import { Shield, Key, ArrowLeft, Loader2, CheckCircle2, AlertCircle, Fingerprint } from "lucide-react";
+import { Shield, Key, ArrowLeft, Loader2, CheckCircle2, AlertCircle, Fingerprint, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 
 type Method = "NONE" | "RECOVERY_CODE" | "SECURITY_QUESTION";
@@ -24,6 +24,8 @@ export default function ForgotPasswordPage() {
     const [recoveryCode, setRecoveryCode] = useState("");
     const [question, setQuestion] = useState("");
     const [answer, setAnswer] = useState("");
+    const [showPassword, setShowPassword] = useState(false);
+    const [showPasswordConfirm, setShowPasswordConfirm] = useState(false);
 
     const handleIdentifySQ = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -168,26 +170,36 @@ export default function ForgotPasswordPage() {
 
                             <div>
                                 <label className="block text-xs font-bold text-zinc-400 uppercase tracking-widest mb-2 ml-1">Yeni Şifre</label>
-                                <input
-                                    type="password"
-                                    required
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    className="w-full bg-zinc-950 border border-zinc-800 text-white rounded-xl px-4 py-3 focus:ring-2 focus:ring-red-600 outline-none transition-all"
-                                    placeholder="••••••••"
-                                />
+                                <div className="relative">
+                                    <input
+                                        type={showPassword ? "text" : "password"}
+                                        required
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        className="w-full bg-zinc-950 border border-zinc-800 text-white rounded-xl px-4 pr-12 py-3 focus:ring-2 focus:ring-red-600 outline-none transition-all"
+                                        placeholder="••••••••"
+                                    />
+                                    <button type="button" onClick={() => setShowPassword(p => !p)} className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors" tabIndex={-1}>
+                                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                    </button>
+                                </div>
                             </div>
-                            
+
                             <div>
                                 <label className="block text-xs font-bold text-zinc-400 uppercase tracking-widest mb-2 ml-1">Yeni Şifre Tekrar</label>
-                                <input
-                                    type="password"
-                                    required
-                                    value={passwordConfirm}
-                                    onChange={(e) => setPasswordConfirm(e.target.value)}
-                                    className="w-full bg-zinc-950 border border-zinc-800 text-white rounded-xl px-4 py-3 focus:ring-2 focus:ring-red-600 outline-none transition-all"
-                                    placeholder="••••••••"
-                                />
+                                <div className="relative">
+                                    <input
+                                        type={showPasswordConfirm ? "text" : "password"}
+                                        required
+                                        value={passwordConfirm}
+                                        onChange={(e) => setPasswordConfirm(e.target.value)}
+                                        className="w-full bg-zinc-950 border border-zinc-800 text-white rounded-xl px-4 pr-12 py-3 focus:ring-2 focus:ring-red-600 outline-none transition-all"
+                                        placeholder="••••••••"
+                                    />
+                                    <button type="button" onClick={() => setShowPasswordConfirm(p => !p)} className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors" tabIndex={-1}>
+                                        {showPasswordConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                    </button>
+                                </div>
                             </div>
 
                             <button
@@ -281,25 +293,35 @@ export default function ForgotPasswordPage() {
                                 </div>
                                 <div>
                                     <label className="block text-xs font-bold text-zinc-400 uppercase tracking-widest mb-2 ml-1">Yeni Şifre</label>
-                                    <input
-                                        type="password"
-                                        required
-                                        value={password}
-                                        onChange={(e) => setPassword(e.target.value)}
-                                        className="w-full bg-zinc-950 border border-zinc-800 text-white rounded-xl px-4 py-3 focus:ring-2 focus:ring-red-600 outline-none transition-all"
-                                        placeholder="••••••••"
-                                    />
+                                    <div className="relative">
+                                        <input
+                                            type={showPassword ? "text" : "password"}
+                                            required
+                                            value={password}
+                                            onChange={(e) => setPassword(e.target.value)}
+                                            className="w-full bg-zinc-950 border border-zinc-800 text-white rounded-xl px-4 pr-12 py-3 focus:ring-2 focus:ring-red-600 outline-none transition-all"
+                                            placeholder="••••••••"
+                                        />
+                                        <button type="button" onClick={() => setShowPassword(p => !p)} className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors" tabIndex={-1}>
+                                            {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                        </button>
+                                    </div>
                                 </div>
                                 <div>
                                     <label className="block text-xs font-bold text-zinc-400 uppercase tracking-widest mb-2 ml-1">Yeni Şifre Tekrar</label>
-                                    <input
-                                        type="password"
-                                        required
-                                        value={passwordConfirm}
-                                        onChange={(e) => setPasswordConfirm(e.target.value)}
-                                        className="w-full bg-zinc-950 border border-zinc-800 text-white rounded-xl px-4 py-3 focus:ring-2 focus:ring-red-600 outline-none transition-all"
-                                        placeholder="••••••••"
-                                    />
+                                    <div className="relative">
+                                        <input
+                                            type={showPasswordConfirm ? "text" : "password"}
+                                            required
+                                            value={passwordConfirm}
+                                            onChange={(e) => setPasswordConfirm(e.target.value)}
+                                            className="w-full bg-zinc-950 border border-zinc-800 text-white rounded-xl px-4 pr-12 py-3 focus:ring-2 focus:ring-red-600 outline-none transition-all"
+                                            placeholder="••••••••"
+                                        />
+                                        <button type="button" onClick={() => setShowPasswordConfirm(p => !p)} className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors" tabIndex={-1}>
+                                            {showPasswordConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
 

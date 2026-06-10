@@ -48,32 +48,38 @@ export function MandatoryAnnouncementModal() {
         fetchUnread();
     }, []);
 
+    const markRead = async (id: number) => {
+        try {
+            const formData = new FormData();
+            formData.append("announcementId", id.toString());
+            await fetch("/api/announcements/mark-read", { method: "POST", body: formData });
+        } catch (e) {
+            console.error("Error marking announcement as read", e);
+        }
+    };
+
     const handleRead = async (id: number) => {
         if (isMarking) return;
         setIsMarking(true);
 
-        try {
-            const formData = new FormData();
-            formData.append("announcementId", id.toString());
+        await markRead(id);
 
-            await fetch("/api/announcements/mark-read", {
-                method: "POST",
-                body: formData
-            });
-
-            // If this was the last announcement, mark session as clean
-            if (currentIndex >= announcements.length - 1) {
-                sessionStorage.setItem("announcementsChecked", "none");
-            }
-
-            // Move to next announcement
-            setCurrentIndex(prev => prev + 1);
-            router.refresh(); // optionally refresh page state
-        } catch (e) {
-            console.error("Error marking announcement as read", e);
-        } finally {
-            setIsMarking(false);
+        // If this was the last announcement, mark session as clean
+        if (currentIndex >= announcements.length - 1) {
+            sessionStorage.setItem("announcementsChecked", "none");
         }
+
+        setCurrentIndex(prev => prev + 1);
+        router.refresh();
+        setIsMarking(false);
+    };
+
+    const handleDismiss = async (id: number) => {
+        await markRead(id);
+        if (currentIndex >= announcements.length - 1) {
+            sessionStorage.setItem("announcementsChecked", "none");
+        }
+        setCurrentIndex(prev => prev + 1);
     };
 
     // Do not render anything if loading or no more announcements
@@ -88,7 +94,16 @@ export function MandatoryAnnouncementModal() {
             <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl w-full max-w-lg shadow-2xl relative overflow-hidden animate-in fade-in zoom-in duration-300">
                 {/* Decorative header */}
                 <div className="absolute top-0 inset-x-0 h-32 bg-gradient-to-br from-red-600 to-red-900 opacity-20 dark:opacity-40" />
-                
+
+                {/* Dismiss (X) button — marks as read */}
+                <button
+                    onClick={() => handleDismiss(currentAnnouncement.id)}
+                    className="absolute top-4 right-4 z-10 p-1.5 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
+                    title="Kapat (Okundu sayılır)"
+                >
+                    <X className="w-5 h-5" />
+                </button>
+
                 <div className="relative p-8">
                     <div className="flex items-center gap-4 mb-6">
                         <div className="w-14 h-14 bg-red-600 rounded-2xl flex items-center justify-center shadow-lg shadow-red-600/30 shrink-0">

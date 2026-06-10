@@ -23,7 +23,33 @@ export async function ensureAnnouncementTable() {
     }
 }
 
-export async function sendAnnouncement(subject: string, content: string, target: string = "ALL") {
+export async function getRefereesAndOfficials() {
+    const session = await getSession();
+    if (!session?.role || !["ADMIN", "SUPER_ADMIN", "ADMIN_IHK"].includes(session.role)) {
+        return { referees: [], officials: [] };
+    }
+
+    try {
+        const referees = await db.referee.findMany({
+            where: { user: { isActive: true } },
+            select: { userId: true, firstName: true, lastName: true, email: true },
+            orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
+        });
+
+        const officials = await db.generalOfficial.findMany({
+            where: { user: { isActive: true } },
+            select: { userId: true, firstName: true, lastName: true, email: true, officialType: true },
+            orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
+        });
+
+        return { referees, officials };
+    } catch (e) {
+        console.error("[GET_REFEREES_OFFICIALS_ERROR]", e);
+        return { referees: [], officials: [] };
+    }
+}
+
+export async function sendAnnouncement(subject: string, content: string, target: string = "ALL", specificUserIds?: number[]) {
     const session = await getSession();
     if (!session?.role || !["ADMIN", "SUPER_ADMIN", "ADMIN_IHK"].includes(session.role)) {
         throw new Error("Unauthorized");
@@ -32,8 +58,21 @@ export async function sendAnnouncement(subject: string, content: string, target:
     try {
         // 1. Find target users
         let recipients: Array<{ email: string }> = [];
+        let savedTarget = target;
 
-        if (target === "ALL") {
+        if (specificUserIds && specificUserIds.length > 0) {
+            // Bireysel seçim: SPECIFIC:id1,id2,... formatında saklanır
+            savedTarget = `SPECIFIC:${specificUserIds.join(",")}`;
+            const refs = await db.referee.findMany({
+                where: { userId: { in: specificUserIds }, email: { not: null } },
+                select: { email: true },
+            });
+            const offs = await db.generalOfficial.findMany({
+                where: { userId: { in: specificUserIds }, email: { not: null } },
+                select: { email: true },
+            });
+            recipients = [...refs, ...offs].filter(r => r.email) as Array<{ email: string }>;
+        } else if (target === "ALL") {
             recipients = await db.$queryRaw<Array<{ email: string }>>`
                 SELECT email FROM (
                     SELECT email FROM referees WHERE email IS NOT NULL
@@ -118,7 +157,7 @@ export async function sendAnnouncement(subject: string, content: string, target:
             data: {
                 subject,
                 content,
-                target,
+                target: savedTarget,
                 senderId: session.userId,
                 sentCount: successCount
             }
@@ -279,19 +318,22 @@ export async function getAnnouncementReadReceipts(announcementId: number) {
         const readDetails = new Map(announcement.reads.map(r => [r.userId, r.readAt]));
 
         let targetUsers: any[] = [];
-        if (announcement.target === "ALL") {
+        if (announcement.target?.startsWith("SPECIFIC:")) {
+            const ids = announcement.target.replace("SPECIFIC:", "").split(",").map(Number).filter(Boolean);
+            const refs = await db.referee.findMany({ where: { userId: { in: ids } }, select: { userId: true, firstName: true, lastName: true, imageUrl: true } });
+            const offs = await db.generalOfficial.findMany({ where: { userId: { in: ids } }, select: { userId: true, firstName: true, lastName: true, imageUrl: true } });
+            targetUsers = [...refs, ...offs];
+        } else if (announcement.target === "ALL") {
             const refs = await db.referee.findMany({ select: { userId: true, firstName: true, lastName: true, imageUrl: true }, where: { user: { isActive: true } }});
             const offs = await db.generalOfficial.findMany({ select: { userId: true, firstName: true, lastName: true, imageUrl: true }, where: { user: { isActive: true } }});
             targetUsers = [...refs, ...offs];
+        } else if (announcement.target === "REFEREE") {
+            targetUsers = await db.referee.findMany({ select: { userId: true, firstName: true, lastName: true, imageUrl: true }, where: { user: { isActive: true } }});
         } else {
-            if (announcement.target === "REFEREE") {
-                targetUsers = await db.referee.findMany({ select: { userId: true, firstName: true, lastName: true, imageUrl: true }, where: { user: { isActive: true } }});
-            } else {
-                targetUsers = await db.generalOfficial.findMany({ 
-                    where: { officialType: announcement.target, user: { isActive: true } },
-                    select: { userId: true, firstName: true, lastName: true, imageUrl: true }
-                });
-            }
+            targetUsers = await db.generalOfficial.findMany({
+                where: { officialType: announcement.target, user: { isActive: true } },
+                select: { userId: true, firstName: true, lastName: true, imageUrl: true }
+            });
         }
 
         const uniqueUsers = Array.from(new Map(targetUsers.map(u => [u.userId, u])).values());

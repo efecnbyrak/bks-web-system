@@ -4,7 +4,7 @@ import { useActionState, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Modal } from "@/components/ui/modal";
 import { login, verify2FA, ActionState } from "@/app/actions/auth";
-import { Loader2, User, Lock, ChevronRight, X, AlertCircle, CheckCircle2, ShieldQuestion } from "lucide-react";
+import { Loader2, User, Lock, ChevronRight, X, AlertCircle, CheckCircle2, ShieldQuestion, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 
 interface LoginModalProps {
@@ -25,6 +25,7 @@ export function LoginModal({ isOpen, onClose, onSwitchToRegister }: LoginModalPr
     const [verifyCode, setVerifyCode] = useState("");
     const [verifying, setVerifying] = useState(false);
     const [verifyError, setVerifyError] = useState("");
+    const [showPassword, setShowPassword] = useState(false);
 
     // Derived state for showing verification step
     const showVerify = loginState.requireVerification && loginState.userId;
@@ -97,11 +98,19 @@ export function LoginModal({ isOpen, onClose, onSwitchToRegister }: LoginModalPr
                             <div className="relative">
                                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
                                 <input
-                                    type="password"
+                                    type={showPassword ? "text" : "password"}
                                     name="password"
-                                    className="w-full pl-12 pr-4 py-4 bg-zinc-50 dark:bg-zinc-800 rounded-2xl border-2 border-zinc-200 dark:border-transparent focus:border-red-600 outline-none transition-all text-sm font-bold placeholder:text-zinc-400 text-zinc-900 dark:text-white"
+                                    className="w-full pl-12 pr-12 py-4 bg-zinc-50 dark:bg-zinc-800 rounded-2xl border-2 border-zinc-200 dark:border-transparent focus:border-red-600 outline-none transition-all text-sm font-bold placeholder:text-zinc-400 text-zinc-900 dark:text-white"
                                     placeholder="Şifrenizi girin"
                                 />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(p => !p)}
+                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
+                                    tabIndex={-1}
+                                >
+                                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                </button>
                             </div>
                         </div>
 

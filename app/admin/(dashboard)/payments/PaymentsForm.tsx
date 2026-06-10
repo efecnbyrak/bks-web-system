@@ -69,13 +69,12 @@ function CurrencyInput({
             <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-black text-zinc-400 select-none">₺</span>
                 <input
-                    type="number"
-                    min={0}
-                    step={0.01}
-                    value={value === 0 ? "" : value}
+                    type="text"
+                    inputMode="decimal"
+                    value={value === 0 ? "" : String(value)}
                     placeholder="0"
                     onChange={(e) => {
-                        const raw = e.target.value.replace(/[^0-9.]/g, "");
+                        const raw = e.target.value.replace(/[^0-9.,]/g, "").replace(",", ".");
                         const cleaned = raw.split(".").slice(0, 2).join(".");
                         const val = parseFloat(cleaned);
                         onChange(isNaN(val) ? 0 : val);
@@ -327,13 +326,12 @@ export function PaymentsForm({ initialConfig, allCategories }: Props) {
                             <div className="relative w-32 shrink-0">
                                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-black text-zinc-400 select-none">₺</span>
                                 <input
-                                    type="number"
-                                    min={0}
-                                    step={0.01}
-                                    value={ek.tutar === 0 ? "" : ek.tutar}
+                                    type="text"
+                                    inputMode="decimal"
+                                    value={ek.tutar === 0 ? "" : String(ek.tutar)}
                                     placeholder="0"
                                     onChange={(e) => {
-                                        const raw = e.target.value.replace(/[^0-9.]/g, "");
+                                        const raw = e.target.value.replace(/[^0-9.,]/g, "").replace(",", ".");
                                         const cleaned = raw.split(".").slice(0, 2).join(".");
                                         const val = parseFloat(cleaned);
                                         updateEkOdeme(ek.id, "tutar", isNaN(val) ? 0 : val);
