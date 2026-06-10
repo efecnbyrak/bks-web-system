@@ -78,8 +78,8 @@ export default async function MatchesPage() {
         if (allNames.size > 0) {
             // Fuzzy matching: tüm hakem/görevli listesini çek, her maç ismi için nameMatches ile eşleştir
             const [referees, officials] = await Promise.all([
-                db.referee.findMany({ select: { firstName: true, lastName: true, phone: true }, where: { NOT: { phone: null } } }),
-                db.generalOfficial.findMany({ select: { firstName: true, lastName: true, phone: true }, where: { NOT: { phone: null } } }),
+                db.referee.findMany({ select: { firstName: true, lastName: true, phone: true }, where: { phone: { not: "" } } }),
+                db.generalOfficial.findMany({ select: { firstName: true, lastName: true, phone: true }, where: { phone: { not: "" } } }),
             ]);
 
             const allPersonnel = [
