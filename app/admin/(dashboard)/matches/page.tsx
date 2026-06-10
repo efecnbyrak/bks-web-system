@@ -18,7 +18,7 @@ export default async function AdminMatchesPage() {
     });
 
     if (!user) {
-        redirect("/basket/admin/login");
+        redirect("/yonetim-4613792580");
     }
 
     const firstName = user?.referee?.firstName || user?.official?.firstName || "";

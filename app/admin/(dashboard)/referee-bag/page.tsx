@@ -7,7 +7,7 @@ export default async function RefereeBagPage() {
     const session = await getSession();
 
     if (!session || !["ADMIN", "SUPER_ADMIN", "ADMIN_IHK"].includes(session.role)) {
-        redirect("/basket/admin/login");
+        redirect("/yonetim-4613792580");
     }
 
     const sections = [

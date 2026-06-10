@@ -18,7 +18,7 @@ export default async function AdminLayout({
 
     // Secure the admin area
     if (!session || !["ADMIN", "SUPER_ADMIN", "ADMIN_IHK"].includes(session.role)) {
-        redirect("/basket/admin/login");
+        redirect("/yonetim-4613792580");
     }
 
     const userDetails = await db.user.findUnique({

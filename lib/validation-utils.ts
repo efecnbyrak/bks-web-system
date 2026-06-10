@@ -38,6 +38,18 @@ export function formatPhone(phone: string): string {
 }
 
 /**
+ * Telefon numarasını veritabanı depolama formatına normalize eder: 05XXXXXXXXX
+ */
+export function normalizePhoneToStorage(phone: string): string {
+    const digits = phone.replace(/\D/g, '');
+    if (digits.length === 10 && digits.startsWith('5')) return '0' + digits;
+    if (digits.length === 11 && digits.startsWith('05')) return digits;
+    if (digits.length === 12 && digits.startsWith('90')) return '0' + digits.substring(2);
+    if (digits.length === 13 && digits.startsWith('905')) return '0' + digits.substring(3);
+    return digits;
+}
+
+/**
  * Şifre gücü hesaplama (Score 0-4)
  */
 export function getPasswordStrength(password: string): { score: number; label: string; color: string } {

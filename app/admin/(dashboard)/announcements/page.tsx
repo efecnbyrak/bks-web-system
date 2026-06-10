@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic';
 export default async function AnnouncementsPage() {
     const session = await getSession();
     if (!session?.role || !["ADMIN", "SUPER_ADMIN", "ADMIN_IHK"].includes(session.role)) {
-        redirect("/basket/admin/login");
+        redirect("/yonetim-4613792580");
     }
 
     // Fetch recent announcements

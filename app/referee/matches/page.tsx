@@ -1,6 +1,7 @@
 import { verifySession } from "@/lib/session";
 import { db } from "@/lib/db";
 import { MatchesClient } from "./MatchesClient";
+import { nameMatches } from "@/lib/match-parser";
 
 export const dynamic = "force-dynamic";
 
@@ -74,29 +75,28 @@ export default async function MatchesPage() {
              ...(m.istatistikciler || []), ...(m.gozlemciler || [])].forEach(n => allNames.add(n));
         }
 
-        const nameParts = [...allNames].map(n => {
-            const parts = n.trim().split(/\s+/);
-            return { firstName: parts[0] || "", lastName: parts.slice(1).join(" ") || "" };
-        }).filter(p => p.firstName && p.lastName);
-
-        if (nameParts.length > 0) {
+        if (allNames.size > 0) {
+            // Fuzzy matching: tüm hakem/görevli listesini çek, her maç ismi için nameMatches ile eşleştir
             const [referees, officials] = await Promise.all([
-                db.referee.findMany({
-                    where: { OR: nameParts.map(p => ({ firstName: { equals: p.firstName, mode: "insensitive" }, lastName: { equals: p.lastName, mode: "insensitive" } })) },
-                    select: { firstName: true, lastName: true, phone: true }
-                }),
-                db.generalOfficial.findMany({
-                    where: { OR: nameParts.map(p => ({ firstName: { equals: p.firstName, mode: "insensitive" }, lastName: { equals: p.lastName, mode: "insensitive" } })) },
-                    select: { firstName: true, lastName: true, phone: true }
-                }),
+                db.referee.findMany({ select: { firstName: true, lastName: true, phone: true }, where: { phone: { not: null } } }),
+                db.generalOfficial.findMany({ select: { firstName: true, lastName: true, phone: true }, where: { phone: { not: null } } }),
             ]);
 
-            referees.forEach(r => {
-                if (r.phone) personnelPhones[normalizeNameStr(r.firstName, r.lastName)] = r.phone;
-            });
-            officials.forEach(o => {
-                if (o.phone) personnelPhones[normalizeNameStr(o.firstName, o.lastName)] = o.phone;
-            });
+            const allPersonnel = [
+                ...referees.map(r => ({ firstName: r.firstName, lastName: r.lastName, phone: r.phone! })),
+                ...officials.map(o => ({ firstName: o.firstName, lastName: o.lastName, phone: o.phone! })),
+            ];
+
+            for (const cellName of allNames) {
+                for (const person of allPersonnel) {
+                    if (nameMatches(cellName, person.firstName, person.lastName)) {
+                        personnelPhones[normalizeNameStr(person.firstName, person.lastName)] = person.phone;
+                        // Ayrıca cell ismin normalize hali ile de kaydet (client-side eşleştirmesi için)
+                        personnelPhones[normalizeNameStr(cellName.split(/\s+/)[0] || "", cellName.split(/\s+/).slice(1).join(" ") || "")] = person.phone;
+                        break;
+                    }
+                }
+            }
         }
     }
 
