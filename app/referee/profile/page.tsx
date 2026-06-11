@@ -4,6 +4,7 @@ import { verifySession } from "@/lib/session";
 import { Suspense } from "react";
 import { RefereeProfileSection } from "../components/RefereeProfileSection";
 import { RefereeAvailabilitySection } from "../components/RefereeAvailabilitySection";
+import { AchievementsSection } from "../components/AchievementsSection";
 
 function SectionLoading({ height = "h-32" }: { height?: string }) {
     return <div className={`w-full ${height} bg-zinc-100 dark:bg-zinc-800 animate-pulse rounded-xl`} />;
@@ -32,7 +33,7 @@ export default async function RefereeProfileDashboard() {
 
                 {/* Right Sidebar: Quick Actions */}
                 <div className="space-y-6">
-                    <div className="bg-red-700 text-white rounded-2xl p-6 shadow-lg flex flex-col justify-between relative overflow-hidden group hover:shadow-xl transition-all h-full max-h-[300px] min-h-[200px]">
+                    <div className="bg-red-700 text-white rounded-2xl p-6 shadow-lg flex flex-col justify-between relative overflow-hidden group hover:shadow-xl transition-all max-h-[300px] min-h-[200px]">
                         <div className="absolute right-[-20px] top-[-20px] opacity-10 transform rotate-12 group-hover:rotate-0 transition-transform">
                             <Clock size={120} />
                         </div>
@@ -50,6 +51,9 @@ export default async function RefereeProfileDashboard() {
                 </div>
 
             </div>
+
+            {/* Achievements Section */}
+            <AchievementsSection />
         </div>
     );
 }
