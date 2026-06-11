@@ -158,9 +158,7 @@ export function MatchesClient({ firstName, lastName, initialMatches = [], initia
     }, []);
 
     useEffect(() => {
-        if (!initialMatches || initialMatches.length === 0) {
-            loadMatches();
-        }
+        loadMatches(true);
     }, []);
 
     // ============================================================
