@@ -3,6 +3,7 @@ import { getSession } from "@/lib/session";
 import { redirect } from "next/navigation";
 import { History, ShieldAlert } from "lucide-react";
 import { ensureAuditLogTable } from "@/lib/logger";
+import { getLogStats } from "./logsUtils";
 import { LogsClient } from "./LogsClient";
 import { LogsTable } from "./LogsTable";
 
@@ -88,6 +89,24 @@ export default async function AuditLogsPage({ searchParams }: PageProps) {
                     <div>
                         <h1 className="text-2xl font-black text-zinc-900 dark:text-white uppercase italic tracking-tight">Sistem İşlem Kayıtları</h1>
                         <p className="text-sm text-zinc-500 font-bold uppercase italic">Son 200 işlem — satıra tıkla detay gör</p>
+                        {(() => {
+                            const stats = getLogStats(logs);
+                            return (
+                                <p className="font-mono text-[10px] text-zinc-400 mt-1 flex flex-wrap gap-x-3">
+                                    <span>TOTAL: {stats.total}</span>
+                                    <span className="text-zinc-600">·</span>
+                                    <span className="text-emerald-600 dark:text-emerald-500">AUTH: {stats.auth}</span>
+                                    <span className="text-zinc-600">·</span>
+                                    <span className="text-violet-600 dark:text-violet-400">MGMT: {stats.user_mgmt}</span>
+                                    <span className="text-zinc-600">·</span>
+                                    <span className="text-orange-600 dark:text-orange-400">PENALTY: {stats.penalty}</span>
+                                    <span className="text-zinc-600">·</span>
+                                    <span className="text-red-600 dark:text-red-400">CRITICAL: {stats.critical}</span>
+                                    <span className="text-zinc-600">·</span>
+                                    <span className="text-amber-600 dark:text-amber-400">WARN: {stats.warning}</span>
+                                </p>
+                            );
+                        })()}
                     </div>
                 </div>
                 <LogsClient users={users} />
@@ -98,11 +117,15 @@ export default async function AuditLogsPage({ searchParams }: PageProps) {
                     {/* Tablo başlıkları */}
                     <div className="flex items-center gap-0 bg-zinc-50 dark:bg-zinc-950/50 text-zinc-500 uppercase text-[10px] font-black tracking-widest border-b border-zinc-100 dark:border-zinc-800">
                         <div className="pl-4 pr-2 py-5 w-10 shrink-0" />
-                        <div className="px-4 py-5 w-52 shrink-0">İşlem</div>
+                        <div className="hidden lg:block px-2 py-5 w-16 shrink-0 font-mono">#id</div>
+                        <div className="px-4 py-5 w-52 md:w-64 shrink-0">İşlem</div>
                         <div className="px-4 py-5 flex-1">Kullanıcı</div>
                         <div className="px-4 py-5 w-64 shrink-0">Detay</div>
-                        <div className="px-4 py-5 w-40 shrink-0">IP Adresi</div>
-                        <div className="px-4 py-5 w-36 shrink-0">Tarih</div>
+                        <div className="hidden lg:block px-4 py-5 w-40 shrink-0">IP Adresi</div>
+                        <div className="px-4 py-5 w-36 shrink-0 flex items-center justify-between">
+                            <span>Tarih</span>
+                            <span className="font-mono text-[9px] normal-case text-zinc-400 hidden xl:block mr-2">{logs.length}/200</span>
+                        </div>
                     </div>
                     {logs.length === 0 ? (
                         <div className="px-6 py-20 text-center">
