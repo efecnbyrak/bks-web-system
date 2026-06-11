@@ -1,7 +1,7 @@
 "use client";
 
-import { Trash2, Calendar, Filter, XCircle, User } from "lucide-react";
-import { useState } from "react";
+import { Trash2, Calendar, Filter, XCircle, Search } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
 import { clearAuditLogs } from "@/app/actions/logs";
 import { useRouter, useSearchParams } from "next/navigation";
 
@@ -24,6 +24,33 @@ export function LogsClient({ users }: LogsClientProps) {
     const [startDate, setStartDate] = useState(searchParams.get("startDate") || "");
     const [endDate, setEndDate] = useState(searchParams.get("endDate") || "");
     const [userId, setUserId] = useState(searchParams.get("userId") || "");
+    const [search, setSearch] = useState(searchParams.get("search") || "");
+    const [dropdownOpen, setDropdownOpen] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
+
+    // Seçili kullanıcının label'ını bul
+    const selectedUser = users.find(u => String(u.id) === userId);
+    const selectedLabel = selectedUser
+        ? (() => { const p = selectedUser.referee || selectedUser.official; return p ? `${p.firstName} ${p.lastName}` : selectedUser.username; })()
+        : "";
+
+    // Arama inputundaki metne göre filtreli liste
+    const filteredUsers = users.filter(u => {
+        const p = u.referee || u.official;
+        const label = p ? `${p.firstName} ${p.lastName}` : u.username;
+        return label.toLocaleLowerCase('tr').includes(search.toLocaleLowerCase('tr'));
+    });
+
+    // Dışarı tıklanırsa dropdown kapansın
+    useEffect(() => {
+        function handleClickOutside(e: MouseEvent) {
+            if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+                setDropdownOpen(false);
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
 
     const hasFilters = startDate || endDate || userId;
 
@@ -32,6 +59,7 @@ export function LogsClient({ users }: LogsClientProps) {
         if (startDate) params.set("startDate", startDate); else params.delete("startDate");
         if (endDate) params.set("endDate", endDate); else params.delete("endDate");
         if (userId) params.set("userId", userId); else params.delete("userId");
+        if (search) params.set("search", search); else params.delete("search");
         router.push(`/admin/logs?${params.toString()}`);
     };
 
@@ -39,7 +67,14 @@ export function LogsClient({ users }: LogsClientProps) {
         setStartDate("");
         setEndDate("");
         setUserId("");
+        setSearch("");
         router.push("/admin/logs");
+    };
+
+    const handleSelectUser = (id: string, label: string) => {
+        setUserId(id);
+        setSearch(label);
+        setDropdownOpen(false);
     };
 
     const handleClear = async () => {
@@ -65,7 +100,7 @@ export function LogsClient({ users }: LogsClientProps) {
     return (
         <div className="flex flex-col md:flex-row items-center gap-4">
             <div className="flex flex-wrap items-center gap-2 bg-white dark:bg-zinc-900 p-2 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
-                {/* Date range */}
+                {/* Tarih aralığı */}
                 <div className="flex items-center gap-2 px-3">
                     <Calendar className="w-4 h-4 text-zinc-400 shrink-0" />
                     <input
@@ -83,30 +118,57 @@ export function LogsClient({ users }: LogsClientProps) {
                     />
                 </div>
 
-                {/* User filter */}
-                <div className="flex items-center gap-2 px-3 border-l border-zinc-100 dark:border-zinc-800">
-                    <User className="w-4 h-4 text-zinc-400 shrink-0" />
-                    <select
-                        value={userId}
-                        onChange={(e) => setUserId(e.target.value)}
-                        className="bg-transparent border-none outline-none text-[10px] font-black uppercase text-zinc-600 dark:text-zinc-400 max-w-[160px]"
-                    >
-                        <option value="">Tüm Kullanıcılar</option>
-                        {users.map((u) => {
-                            const profile = u.referee || u.official;
-                            const label = profile
-                                ? `${profile.firstName} ${profile.lastName}`
-                                : u.username;
-                            return (
-                                <option key={u.id} value={String(u.id)}>
-                                    {label}
-                                </option>
-                            );
-                        })}
-                    </select>
+                {/* Kullanıcı arama */}
+                <div className="relative flex items-center gap-2 px-3 border-l border-zinc-100 dark:border-zinc-800" ref={dropdownRef}>
+                    <Search className="w-4 h-4 text-zinc-400 shrink-0" />
+                    <input
+                        type="text"
+                        placeholder="Kişi ara..."
+                        value={search}
+                        onChange={(e) => {
+                            setSearch(e.target.value);
+                            setUserId("");
+                            setDropdownOpen(true);
+                        }}
+                        onFocus={() => setDropdownOpen(true)}
+                        className="bg-transparent border-none outline-none text-[10px] font-black uppercase text-zinc-600 dark:text-zinc-400 w-36 placeholder:text-zinc-300 dark:placeholder:text-zinc-600"
+                    />
+                    {search && (
+                        <button
+                            onClick={() => { setSearch(""); setUserId(""); setDropdownOpen(false); }}
+                            className="text-zinc-300 hover:text-zinc-500 transition-colors"
+                        >
+                            <XCircle className="w-3.5 h-3.5" />
+                        </button>
+                    )}
+
+                    {/* Dropdown */}
+                    {dropdownOpen && filteredUsers.length > 0 && (
+                        <div className="absolute top-full left-0 mt-2 w-56 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-lg z-50 max-h-60 overflow-y-auto">
+                            <div
+                                className="px-4 py-2.5 text-[10px] font-black uppercase text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 cursor-pointer"
+                                onClick={() => { setUserId(""); setSearch(""); setDropdownOpen(false); }}
+                            >
+                                Tüm Kullanıcılar
+                            </div>
+                            {filteredUsers.map((u) => {
+                                const p = u.referee || u.official;
+                                const label = p ? `${p.firstName} ${p.lastName}` : u.username;
+                                return (
+                                    <div
+                                        key={u.id}
+                                        onClick={() => handleSelectUser(String(u.id), label)}
+                                        className={`px-4 py-2.5 text-[11px] font-semibold cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors ${userId === String(u.id) ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white" : "text-zinc-700 dark:text-zinc-300"}`}
+                                    >
+                                        {label}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
                 </div>
 
-                {/* Action buttons */}
+                {/* Butonlar */}
                 <div className="flex gap-1 border-l border-zinc-100 dark:border-zinc-800 pl-2">
                     <button
                         onClick={handleApplyFilters}

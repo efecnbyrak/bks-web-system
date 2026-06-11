@@ -23,15 +23,21 @@ export default async function AuditLogsPage({ searchParams }: PageProps) {
 
     await ensureAuditLogTable();
 
-    // Fetch user list for filter dropdown
-    const users = await db.user.findMany({
+    // Fetch user list for filter — sorted alphabetically by first name
+    const usersRaw = await db.user.findMany({
         select: {
             id: true,
             username: true,
             referee: { select: { firstName: true, lastName: true } },
             official: { select: { firstName: true, lastName: true } },
         },
-        orderBy: { id: 'asc' },
+    });
+    const users = usersRaw.sort((a, b) => {
+        const nameA = (a.referee?.firstName || a.official?.firstName || a.username).toLocaleLowerCase('tr');
+        const nameB = (b.referee?.firstName || b.official?.firstName || b.username).toLocaleLowerCase('tr');
+        const lastA = (a.referee?.lastName || a.official?.lastName || '').toLocaleLowerCase('tr');
+        const lastB = (b.referee?.lastName || b.official?.lastName || '').toLocaleLowerCase('tr');
+        return (nameA + ' ' + lastA).localeCompare(nameB + ' ' + lastB, 'tr');
     });
 
     let logs: any[] = [];
