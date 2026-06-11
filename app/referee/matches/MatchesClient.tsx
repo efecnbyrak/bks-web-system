@@ -192,7 +192,7 @@ export function MatchesClient({ firstName, lastName, initialMatches = [], initia
             const parts = saat.split(/[:.]/);
             if (parts.length >= 2) {
                 const matchTime = new Date(nowStartOfDay);
-                matchTime.setHours(parseInt(parts[0], 10) + 1, parseInt(parts[1], 10), 0, 0);
+                matchTime.setHours(parseInt(parts[0], 10), parseInt(parts[1], 10), 0, 0);
                 return nowFull > matchTime;
             }
         }

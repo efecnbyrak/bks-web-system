@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Search, X, Loader2, BookOpen, ChevronDown, ChevronUp, Sparkles } from "lucide-react";
+import { Search, X, Loader2, BookOpen, ChevronDown, ChevronUp, Sparkles, Circle, ShieldAlert, Clock, Grid2X2, Users, Shield, FileText, AlertTriangle, Hand } from "lucide-react";
 
 interface RuleSection {
     id: string;
@@ -29,6 +29,45 @@ interface SearchEntry {
 interface NativeRulesViewerProps {
     type: "kural" | "yorum";
 }
+
+// Madde numarasından kategori — basketbol-asistani kuralları ile birebir uyumlu
+const ARTICLE_CATEGORY: Record<number, string> = {
+    1: "oyun",
+    2: "saha", 3: "saha",
+    4: "takimlar", 5: "takimlar", 6: "takimlar", 7: "takimlar",
+    8: "duzenlemeler", 9: "duzenlemeler", 10: "duzenlemeler", 11: "duzenlemeler",
+    12: "duzenlemeler", 13: "duzenlemeler", 14: "duzenlemeler", 15: "duzenlemeler",
+    16: "duzenlemeler", 17: "duzenlemeler", 18: "duzenlemeler", 19: "duzenlemeler",
+    20: "duzenlemeler",
+    21: "duzenlemeler",
+    22: "ihlaller", 23: "ihlaller", 24: "ihlaller", 25: "ihlaller",
+    26: "ihlaller", 27: "ihlaller", 28: "ihlaller", 29: "ihlaller",
+    30: "ihlaller", 31: "ihlaller",
+    32: "fauller", 33: "fauller", 34: "fauller", 35: "fauller",
+    36: "fauller", 37: "fauller", 38: "fauller", 39: "fauller",
+    40: "genel", 41: "genel", 42: "genel", 43: "genel", 44: "genel",
+    45: "hakemler", 46: "hakemler", 47: "hakemler", 48: "hakemler", 49: "hakemler", 50: "hakemler",
+};
+
+interface CategoryDef {
+    key: string;
+    label: string;
+    color: string;        // Tailwind bg class (active)
+    textColor: string;    // Tailwind text class (active)
+    borderColor: string;  // Tailwind border class (active)
+    icon: React.ReactNode;
+}
+
+const CATEGORIES: CategoryDef[] = [
+    { key: "oyun",         label: "Oyun",         color: "bg-red-600",     textColor: "text-white",   borderColor: "border-red-600",      icon: <Circle className="w-4 h-4" /> },
+    { key: "saha",         label: "Saha",          color: "bg-purple-600",  textColor: "text-white",   borderColor: "border-purple-600",   icon: <Grid2X2 className="w-4 h-4" /> },
+    { key: "takimlar",     label: "Takımlar",      color: "bg-cyan-600",    textColor: "text-white",   borderColor: "border-cyan-600",     icon: <Users className="w-4 h-4" /> },
+    { key: "duzenlemeler", label: "Düzenlemeler",  color: "bg-blue-600",    textColor: "text-white",   borderColor: "border-blue-600",     icon: <Clock className="w-4 h-4" /> },
+    { key: "ihlaller",     label: "İhlaller",      color: "bg-green-600",   textColor: "text-white",   borderColor: "border-green-600",    icon: <AlertTriangle className="w-4 h-4" /> },
+    { key: "fauller",      label: "Fauller",       color: "bg-orange-500",  textColor: "text-white",   borderColor: "border-orange-500",   icon: <Hand className="w-4 h-4" /> },
+    { key: "genel",        label: "Genel",         color: "bg-stone-600",   textColor: "text-white",   borderColor: "border-stone-600",    icon: <FileText className="w-4 h-4" /> },
+    { key: "hakemler",     label: "Hakemler",      color: "bg-rose-600",    textColor: "text-white",   borderColor: "border-rose-600",     icon: <Shield className="w-4 h-4" /> },
+];
 
 const QUICK_CHIPS: Record<string, string[]> = {
     kural: ["Faul", "Serbest Atış", "8 Saniye", "Dripling", "Teknik Faul", "Kavga", "Sayı", "Zaman Aşımı"],
@@ -179,6 +218,7 @@ export function NativeRulesViewer({ type }: NativeRulesViewerProps) {
 
     const [searchResults, setSearchResults] = useState<{article: RuleArticle; matchedSectionIds: string[]}[]>([]);
     const [hasSearched, setHasSearched] = useState(false);
+    const [activeCategory, setActiveCategory] = useState<string | null>(null);
 
     const inputRef = useRef<HTMLInputElement>(null);
     const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -282,6 +322,11 @@ export function NativeRulesViewer({ type }: NativeRulesViewerProps) {
         inputRef.current?.focus();
     };
 
+    const toggleCategory = (key: string) => {
+        setActiveCategory(prev => prev === key ? null : key);
+        clearSearch();
+    };
+
     const applyQuery = (q: string) => {
         setQuery(q);
         setShowSuggestions(false);
@@ -297,7 +342,13 @@ export function NativeRulesViewer({ type }: NativeRulesViewerProps) {
         );
     }
 
-    const displayArticles = hasSearched ? searchResults : articles.map(a => ({ article: a, matchedSectionIds: [] }));
+    const baseArticles = activeCategory && type === "kural"
+        ? articles.filter(a => ARTICLE_CATEGORY[parseInt(a.id)] === activeCategory)
+        : articles;
+
+    const displayArticles = hasSearched
+        ? searchResults.filter(r => !activeCategory || !type || type !== "kural" || ARTICLE_CATEGORY[parseInt(r.article.id)] === activeCategory)
+        : baseArticles.map(a => ({ article: a, matchedSectionIds: [] }));
 
     return (
         <div className="space-y-5">
@@ -361,8 +412,48 @@ export function NativeRulesViewer({ type }: NativeRulesViewerProps) {
                 )}
             </div>
 
+            {/* Category filter — only for kurallar */}
+            {type === "kural" && !query && (
+                <div>
+                    <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.15em] mb-3">Kategoriler</p>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                        {CATEGORIES.map(cat => {
+                            const isActive = activeCategory === cat.key;
+                            const count = articles.filter(a => ARTICLE_CATEGORY[parseInt(a.id)] === cat.key).length;
+                            return (
+                                <button
+                                    key={cat.key}
+                                    onClick={() => toggleCategory(cat.key)}
+                                    className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl border-2 text-left transition-all active:scale-95 ${
+                                        isActive
+                                            ? `${cat.color} ${cat.textColor} ${cat.borderColor} shadow-md`
+                                            : "border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300 hover:border-zinc-300 dark:hover:border-zinc-600"
+                                    }`}
+                                >
+                                    <span className={`shrink-0 ${isActive ? cat.textColor : "text-zinc-400 dark:text-zinc-500"}`}>
+                                        {cat.icon}
+                                    </span>
+                                    <span className="flex-1 min-w-0">
+                                        <span className="block text-[13px] font-bold leading-tight truncate">{cat.label}</span>
+                                        <span className={`text-[11px] font-semibold ${isActive ? "opacity-80" : "text-zinc-400 dark:text-zinc-500"}`}>{count} madde</span>
+                                    </span>
+                                </button>
+                            );
+                        })}
+                    </div>
+                    {activeCategory && (
+                        <button
+                            onClick={() => setActiveCategory(null)}
+                            className="mt-2 text-xs text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 font-semibold underline-offset-2 hover:underline transition-colors"
+                        >
+                            Tüm maddeler
+                        </button>
+                    )}
+                </div>
+            )}
+
             {/* Quick chips */}
-            {!query && (
+            {!query && !activeCategory && (
                 <div>
                     <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.15em] mb-3">Hızlı Arama</p>
                     <div className="flex flex-wrap gap-2">
@@ -383,8 +474,8 @@ export function NativeRulesViewer({ type }: NativeRulesViewerProps) {
             {hasSearched ? (
                 <div className="flex items-center justify-between py-0.5">
                     <p className="text-sm font-bold text-zinc-500 dark:text-zinc-400">
-                        {searchResults.length > 0
-                            ? <><span className="text-red-600 dark:text-red-500">{searchResults.length}</span> madde bulundu</>
+                        {displayArticles.length > 0
+                            ? <><span className="text-red-600 dark:text-red-500">{displayArticles.length}</span> madde bulundu</>
                             : `"${query}" için sonuç bulunamadı`
                         }
                     </p>
@@ -396,7 +487,10 @@ export function NativeRulesViewer({ type }: NativeRulesViewerProps) {
                 !query && (
                     <div className="flex items-center justify-between py-0.5">
                         <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.15em]">
-                            {TYPE_LABEL[type]} — {articles.length} Madde
+                            {activeCategory
+                                ? <>{CATEGORIES.find(c => c.key === activeCategory)?.label} — <span className="text-red-500">{displayArticles.length}</span> Madde</>
+                                : <>{TYPE_LABEL[type]} — {articles.length} Madde</>
+                            }
                         </p>
                     </div>
                 )
