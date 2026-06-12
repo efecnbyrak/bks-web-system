@@ -5,6 +5,7 @@ import ExcelJS from "exceljs";
 import { NextResponse } from "next/server";
 import { formatClassification, formatOfficialType } from "@/lib/format-utils";
 import { sortForms, SHORT_CLASSIFICATION_LABEL } from "@/lib/availability-sort";
+import { logAction } from "@/lib/logger";
 
 export const runtime = "nodejs";
 
@@ -330,6 +331,12 @@ export async function GET(request: Request) {
         } else {
             filename = `BKS_${weekPrefix}Hakem_Uygunluk_Listesi_${dateStr}.xlsx`;
         }
+
+        await logAction(
+            session.userId,
+            "EXCEL_EXPORT",
+            JSON.stringify({ group, week: week || "current", filename })
+        );
 
         return new NextResponse(nodeBuffer, {
             headers: {

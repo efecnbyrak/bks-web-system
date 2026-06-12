@@ -29,6 +29,10 @@ export const ACTION_META: Record<string, ActionMeta> = {
     ANNOUNCEMENT_SENT:                { category: "announcement", severity: "INFO",     label_tr: "Duyuru Gönderildi" },
     ANNOUNCEMENT_DELETED:             { category: "announcement", severity: "WARNING",  label_tr: "Duyuru Silindi" },
     LOGS_CLEARED:                     { category: "system",       severity: "CRITICAL", label_tr: "Loglar Temizlendi" },
+    AVAILABILITY_FORM_SUBMIT:         { category: "system",       severity: "INFO",     label_tr: "Uygunluk Formu Gönderildi" },
+    PHONE_NORMALIZE:                  { category: "system",       severity: "INFO",     label_tr: "Telefon Numaraları Düzenlendi" },
+    EXCEL_EXPORT:                     { category: "announcement", severity: "INFO",     label_tr: "Excel Listesi İndirildi" },
+    LOGS_AUTO_PURGED:                 { category: "system",       severity: "WARNING",  label_tr: "Eski Loglar Otomatik Temizlendi" },
 };
 
 export const CATEGORY_LABELS: Record<Category, string> = {

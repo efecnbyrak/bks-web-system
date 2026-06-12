@@ -133,8 +133,11 @@ export function LogsTable({ logs }: LogsTableProps) {
 
                                 {/* Action + severity */}
                                 <div className="px-4 py-4 w-52 md:w-64 shrink-0">
-                                    <div className="flex flex-col gap-1">
-                                        <span className={`px-2 md:px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${getActionColor(log.action)}`}>
+                                    <div className="flex flex-col gap-0.5">
+                                        <span className="text-sm font-bold text-zinc-800 dark:text-zinc-100 leading-snug line-clamp-1">
+                                            {meta.label_tr || log.action}
+                                        </span>
+                                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-mono font-semibold w-fit opacity-70 ${getActionColor(log.action)}`}>
                                             {log.action}
                                         </span>
                                         <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest w-fit ${severityStyles.pill}`}>
