@@ -21,6 +21,64 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+@keyframes shoot-score {
+  0%   { transform: translate(0, 0) scale(1) rotate(0deg); opacity: 1; }
+  40%  { transform: translate(120px, -160px) scale(1.1) rotate(180deg); opacity: 1; }
+  70%  { transform: translate(220px, -60px) scale(0.9) rotate(320deg); opacity: 1; }
+  85%  { transform: translate(215px, -20px) scale(0.8) rotate(360deg); opacity: 0.9; }
+  100% { transform: translate(215px, 10px) scale(0.6) rotate(400deg); opacity: 0; }
+}
+
+@keyframes shoot-miss {
+  0%   { transform: translate(0, 0) scale(1) rotate(0deg); opacity: 1; }
+  40%  { transform: translate(100px, -150px) scale(1.1) rotate(200deg); opacity: 1; }
+  70%  { transform: translate(260px, -30px) scale(0.9) rotate(350deg); opacity: 1; }
+  100% { transform: translate(300px, 80px) scale(0.7) rotate(420deg); opacity: 0; }
+}
+
+@keyframes net-swing {
+  0%, 100% { transform: skewX(0deg); }
+  25%       { transform: skewX(8deg); }
+  75%       { transform: skewX(-8deg); }
+}
+
+@keyframes score-pop {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.4); }
+  70%  { transform: scale(0.9); }
+  100% { transform: scale(1); }
+}
+
+@keyframes confetti-fall {
+  0%   { transform: translateY(0) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(80px) rotate(720deg); opacity: 0; }
+}
+
+@keyframes float-ball {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-8px); }
+}
+
+.ball-idle {
+  animation: float-ball 2s ease-in-out infinite;
+}
+
+.ball-score {
+  animation: shoot-score 0.9s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+.ball-miss {
+  animation: shoot-miss 0.9s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+.net-animate {
+  animation: net-swing 0.4s ease-in-out 3;
+}
+
+.score-animate {
+  animation: score-pop 0.5s ease-out;
+}
+
 @layer utilities {
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
