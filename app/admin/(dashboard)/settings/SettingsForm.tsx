@@ -11,6 +11,7 @@ interface SettingsFormProps {
     initialTargetDate: string;
     initialWeekNumber: string;
     initialIbanRequired: boolean;
+    initialMaintenanceMode: boolean;
     isSuperAdmin: boolean;
 }
 
@@ -20,6 +21,7 @@ export function SettingsForm({
     initialTargetDate,
     initialWeekNumber,
     initialIbanRequired,
+    initialMaintenanceMode,
     isSuperAdmin
 }: SettingsFormProps) {
     const [loading, setLoading] = useState(false);
@@ -31,6 +33,7 @@ export function SettingsForm({
     const [targetDateVal, setTargetDateVal] = useState(initialTargetDate ? new Date(initialTargetDate).toISOString().split('T')[0] : "");
     const [weekNumberVal, setWeekNumberVal] = useState(initialWeekNumber);
     const [ibanRequiredVal, setIbanRequiredVal] = useState(initialIbanRequired);
+    const [maintenanceModeVal, setMaintenanceModeVal] = useState(initialMaintenanceMode);
 
     const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -44,6 +47,7 @@ export function SettingsForm({
             { key: "CURRENT_WEEK_NUMBER", value: weekNumberVal },
             { key: "AVAILABILITY_TARGET_DATE", value: new Date(targetDateVal).toISOString() },
             { key: "IBAN_COLLECTION_ENABLED", value: String(ibanRequiredVal) },
+            { key: "MATCHES_MAINTENANCE_MODE", value: String(maintenanceModeVal) },
             ...(targetChanged ? [{ key: "AVAILABILITY_TARGET_MANUAL", value: "true" }] : []),
         ];
 
@@ -209,6 +213,26 @@ export function SettingsForm({
                                     <div className={`absolute top-1 left-1 w-5 h-5 bg-white rounded-full transition-transform ${ibanRequiredVal ? 'translate-x-7' : 'translate-x-0'}`} />
                                 </button>
                                 <span className={`text-[10px] font-black uppercase italic ${ibanRequiredVal ? 'text-red-600' : 'text-zinc-400'}`}>AKTİF</span>
+                            </div>
+                        </div>
+                    )}
+
+                    {isSuperAdmin && (
+                        <div className="flex flex-col md:flex-row md:items-center justify-between p-5 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl gap-4 border border-zinc-100 dark:border-zinc-800">
+                            <div>
+                                <p className="font-black text-zinc-900 dark:text-white text-sm uppercase italic">Maçlarım Bakım Modu</p>
+                                <p className="text-xs text-zinc-500 font-bold uppercase italic">Aktif edilirse, Maçlarım sayfası bakım moduna girer ve kullanıcılara uyarı gösterilir.</p>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <span className={`text-[10px] font-black uppercase italic ${!maintenanceModeVal ? 'text-zinc-400' : 'text-zinc-300'}`}>PASİF</span>
+                                <button
+                                    type="button"
+                                    onClick={() => setMaintenanceModeVal(!maintenanceModeVal)}
+                                    className={`relative w-14 h-7 rounded-full transition-colors ${maintenanceModeVal ? 'bg-orange-500' : 'bg-zinc-300 dark:bg-zinc-600'}`}
+                                >
+                                    <div className={`absolute top-1 left-1 w-5 h-5 bg-white rounded-full transition-transform ${maintenanceModeVal ? 'translate-x-7' : 'translate-x-0'}`} />
+                                </button>
+                                <span className={`text-[10px] font-black uppercase italic ${maintenanceModeVal ? 'text-orange-500' : 'text-zinc-400'}`}>AKTİF</span>
                             </div>
                         </div>
                     )}
