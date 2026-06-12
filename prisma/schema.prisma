@@ -37,6 +37,8 @@ model User {
   resetPasswordExpiresAt DateTime?
   recoveryCode String? @unique
   videoProgress VideoProgress[]
+  sectionVisits SectionVisit[]
+  ruleProgress  RuleProgress[]
   chats ChatSession[]
   securityQuestion String?
   securityAnswer String?
@@ -605,6 +607,32 @@ model UserMatchAssignment {
   @@unique([userId, matchId])
   @@index([userId])
   @@map("user_match_assignments")
+}
+
+model SectionVisit {
+  id        Int      @id @default(autoincrement())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    Int
+  section   String   // "kural" | "yorum"
+  visitedAt DateTime @default(now())
+
+  @@unique([userId, section])
+  @@index([userId])
+  @@map("section_visits")
+}
+
+model RuleProgress {
+  id        Int      @id @default(autoincrement())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    Int
+  articleId String
+  type      String   // "kural" | "yorum"
+  readAt    DateTime @default(now())
+
+  @@unique([userId, articleId, type])
+  @@index([userId])
+  @@index([userId, type])
+  @@map("rule_progress")
 }
 
 model WorkerSyncLog {

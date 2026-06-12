@@ -72,7 +72,17 @@ export async function GET(req: NextRequest) {
             };
         });
 
-        return NextResponse.json(results);
+        // 5. Fetch section visits for achievements
+        const sectionVisits = await db.sectionVisit.findMany({
+            where: { userId: session.userId },
+            select: { section: true },
+        });
+
+        return NextResponse.json({
+            assignments: results,
+            kuralVisited: sectionVisits.some((v) => v.section === "kural"),
+            yorumVisited: sectionVisits.some((v) => v.section === "yorum"),
+        });
     } catch (error) {
         console.error("Fetch Assignments Error:", error);
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });

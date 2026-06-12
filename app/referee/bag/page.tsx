@@ -12,10 +12,9 @@ export default function RefereeBagPage() {
         fetch("/api/user/assignments")
             .then(r => r.json())
             .then(data => {
-                if (Array.isArray(data)) {
-                    setPendingCount(data.filter(a => !a.isCompleted).length);
-                    setCompletedCount(data.filter(a => a.isCompleted).length);
-                }
+                const assignments = Array.isArray(data) ? data : (data.assignments || []);
+                setPendingCount(assignments.filter((a: { isCompleted: boolean }) => !a.isCompleted).length);
+                setCompletedCount(assignments.filter((a: { isCompleted: boolean }) => a.isCompleted).length);
             })
             .catch(() => {});
     }, []);
@@ -25,7 +24,7 @@ export default function RefereeBagPage() {
             title: "Kural Kitabı",
             subtitle: "Profesyonel Hakem Kaynağı",
             description: "Basketbol oyun kuralları, resmi yorumlar ve hakem mekaniği dökümanlarını inceleyin.",
-            bullets: ["FIBA 2022 güncel kurallar", "Resmi kural yorumları", "İnteraktif madde arama"],
+            bullets: ["FIBA 2024 güncel kurallar", "Resmi kural yorumları", "İnteraktif madde arama"],
             icon: <BookOpen className="w-10 h-10 text-white" />,
             iconBg: "from-blue-600 to-blue-800",
             href: "/referee/bag/rules",

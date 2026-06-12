@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
-import { Search, X, Loader2, BookOpen, ChevronDown, ChevronUp, Sparkles, Circle, ShieldAlert, Clock, Grid2X2, Users, Shield, FileText, AlertTriangle, Hand } from "lucide-react";
+import { useState, useEffect, useRef, useCallback, useTransition } from "react";
+import { Search, X, Loader2, BookOpen, ChevronDown, ChevronUp, Sparkles, Circle, ShieldAlert, Clock, Grid2X2, Users, Shield, FileText, AlertTriangle, Hand, CheckCircle2 } from "lucide-react";
+import { markArticleRead } from "@/app/actions/rules";
 
 interface RuleSection {
     id: string;
@@ -28,9 +29,10 @@ interface SearchEntry {
 
 interface NativeRulesViewerProps {
     type: "kural" | "yorum";
+    readArticleIds?: string[];
 }
 
-// Madde numarasından kategori — basketbol-asistani kuralları ile birebir uyumlu
+// Madde numarasından kategori
 const ARTICLE_CATEGORY: Record<number, string> = {
     1: "oyun",
     2: "saha", 3: "saha",
@@ -52,9 +54,9 @@ const ARTICLE_CATEGORY: Record<number, string> = {
 interface CategoryDef {
     key: string;
     label: string;
-    color: string;        // Tailwind bg class (active)
-    textColor: string;    // Tailwind text class (active)
-    borderColor: string;  // Tailwind border class (active)
+    color: string;
+    textColor: string;
+    borderColor: string;
     icon: React.ReactNode;
 }
 
@@ -75,7 +77,7 @@ const QUICK_CHIPS: Record<string, string[]> = {
 };
 
 const TYPE_LABEL: Record<string, string> = {
-    kural: "Basketbol Oyun Kuralları 2022",
+    kural: "Basketbol Oyun Kuralları 2024",
     yorum: "Resmi Yorumlar",
 };
 
@@ -99,35 +101,59 @@ function ArticleCard({
     query,
     defaultOpen = false,
     matchedSectionIds = [],
+    isRead = false,
+    onOpen,
 }: {
     article: RuleArticle;
     query: string;
     defaultOpen?: boolean;
     matchedSectionIds?: string[];
+    isRead?: boolean;
+    onOpen?: () => void;
 }) {
     const [open, setOpen] = useState(defaultOpen);
+    const hasNotified = useRef(false);
 
     useEffect(() => {
         setOpen(defaultOpen);
     }, [defaultOpen]);
 
+    const handleToggle = () => {
+        const opening = !open;
+        setOpen(opening);
+        if (opening && !hasNotified.current) {
+            hasNotified.current = true;
+            onOpen?.();
+        }
+    };
+
     return (
-        <div className="border border-zinc-200 dark:border-zinc-800 rounded-2xl overflow-hidden bg-white dark:bg-zinc-900 shadow-sm">
+        <div className={`border rounded-2xl overflow-hidden bg-white dark:bg-zinc-900 shadow-sm transition-all duration-200 ${
+            isRead
+                ? "border-green-200 dark:border-green-900/60"
+                : "border-zinc-200 dark:border-zinc-800"
+        }`}>
             {/* Article Header */}
             <button
-                onClick={() => setOpen(o => !o)}
-                className="w-full flex items-center gap-4 px-4 py-4 sm:px-5 sm:py-5 text-left hover:bg-zinc-50 dark:hover:bg-zinc-800/60 active:bg-zinc-100 dark:active:bg-zinc-800 transition-colors"
+                onClick={handleToggle}
+                className="w-full flex items-center gap-3 sm:gap-4 px-4 py-4 sm:px-5 sm:py-5 text-left hover:bg-zinc-50 dark:hover:bg-zinc-800/60 active:bg-zinc-100 dark:active:bg-zinc-800 transition-colors"
             >
                 {/* Number badge */}
-                <span className="shrink-0 inline-flex items-center justify-center w-12 h-12 rounded-xl bg-red-600 text-white text-base font-black shadow-sm shadow-red-600/30">
-                    {article.id}
+                <span className={`shrink-0 inline-flex items-center justify-center w-11 h-11 sm:w-12 sm:h-12 rounded-xl text-white text-sm sm:text-base font-black shadow-sm ${
+                    isRead
+                        ? "bg-green-500 shadow-green-500/30"
+                        : "bg-red-600 shadow-red-600/30"
+                }`}>
+                    {isRead ? <CheckCircle2 className="w-5 h-5" /> : article.id}
                 </span>
 
                 <div className="flex-1 min-w-0">
-                    <p className="text-[10px] font-black text-red-500 dark:text-red-400 uppercase tracking-[0.15em] mb-0.5">
-                        Madde {article.id}
+                    <p className={`text-[10px] font-black uppercase tracking-[0.15em] mb-0.5 ${
+                        isRead ? "text-green-500 dark:text-green-400" : "text-red-500 dark:text-red-400"
+                    }`}>
+                        Madde {article.id}{isRead ? " · Okundu" : ""}
                     </p>
-                    <p className="font-bold text-zinc-900 dark:text-zinc-100 text-[15px] sm:text-base leading-snug">
+                    <p className="font-bold text-zinc-900 dark:text-zinc-100 text-sm sm:text-[15px] leading-snug">
                         {query ? highlightText(article.title, query) : article.title}
                     </p>
                 </div>
@@ -144,7 +170,6 @@ function ArticleCard({
             {/* Article Content */}
             {open && (
                 <div className="border-t border-zinc-100 dark:border-zinc-800 px-4 pb-5 pt-4 sm:px-5 space-y-5">
-                    {/* Intro paragraphs */}
                     {article.intro.length > 0 && (
                         <div className="space-y-2.5 pb-1">
                             {article.intro.map((p, i) => (
@@ -155,7 +180,6 @@ function ArticleCard({
                         </div>
                     )}
 
-                    {/* Sections */}
                     <div className="space-y-4">
                         {article.sections.map((sec, si) => {
                             const isMatchedSection = matchedSectionIds.includes(sec.id);
@@ -168,7 +192,6 @@ function ArticleCard({
                                             : "border-red-200 dark:border-red-900/60 bg-zinc-50 dark:bg-zinc-800/40"
                                     }`}
                                 >
-                                    {/* Section ID + Title */}
                                     {(sec.title || sec.id) && (
                                         <div className="flex flex-wrap items-baseline gap-2">
                                             {sec.id && (
@@ -183,8 +206,6 @@ function ArticleCard({
                                             )}
                                         </div>
                                     )}
-
-                                    {/* Paragraphs */}
                                     <div className="space-y-2">
                                         {sec.paragraphs.map((para, pi) => (
                                             <p key={pi} className={`text-[14px] sm:text-[15px] leading-[1.75] ${
@@ -206,7 +227,7 @@ function ArticleCard({
     );
 }
 
-export function NativeRulesViewer({ type }: NativeRulesViewerProps) {
+export function NativeRulesViewer({ type, readArticleIds = [] }: NativeRulesViewerProps) {
     const [articles, setArticles] = useState<RuleArticle[]>([]);
     const [searchIndex, setSearchIndex] = useState<SearchEntry[]>([]);
     const [loadingData, setLoadingData] = useState(true);
@@ -219,6 +240,9 @@ export function NativeRulesViewer({ type }: NativeRulesViewerProps) {
     const [searchResults, setSearchResults] = useState<{article: RuleArticle; matchedSectionIds: string[]}[]>([]);
     const [hasSearched, setHasSearched] = useState(false);
     const [activeCategory, setActiveCategory] = useState<string | null>(null);
+
+    const [localReadIds, setLocalReadIds] = useState<Set<string>>(new Set(readArticleIds));
+    const [, startTransition] = useTransition();
 
     const inputRef = useRef<HTMLInputElement>(null);
     const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -257,6 +281,13 @@ export function NativeRulesViewer({ type }: NativeRulesViewerProps) {
         }
         load();
     }, [type]);
+
+    const handleArticleOpen = useCallback((articleId: string) => {
+        if (!localReadIds.has(articleId)) {
+            setLocalReadIds(prev => new Set([...prev, articleId]));
+            startTransition(() => { markArticleRead(articleId, type); });
+        }
+    }, [localReadIds, type]);
 
     const doSearch = useCallback((q: string) => {
         if (!q || q.trim().length < 2 || !fuseRef.current) {
@@ -350,8 +381,40 @@ export function NativeRulesViewer({ type }: NativeRulesViewerProps) {
         ? searchResults.filter(r => !activeCategory || !type || type !== "kural" || ARTICLE_CATEGORY[parseInt(r.article.id)] === activeCategory)
         : baseArticles.map(a => ({ article: a, matchedSectionIds: [] }));
 
+    // Progress hesaplama
+    const readCount = articles.filter(a => localReadIds.has(a.id)).length;
+    const totalCount = articles.length;
+    const progressPercent = totalCount > 0 ? Math.round((readCount / totalCount) * 100) : 0;
+
     return (
         <div className="space-y-5">
+            {/* İlerleme çubuğu */}
+            {totalCount > 0 && (
+                <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4">
+                    <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                            <CheckCircle2 className="w-4 h-4 text-green-500" />
+                            <span className="text-xs font-black text-zinc-700 dark:text-zinc-300 uppercase tracking-wide">
+                                {TYPE_LABEL[type]} — İlerleme
+                            </span>
+                        </div>
+                        <span className="text-xs font-black text-green-600 dark:text-green-400">
+                            {readCount} / {totalCount} madde
+                        </span>
+                    </div>
+                    <div className="h-2 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
+                        <div
+                            className="h-full bg-gradient-to-r from-green-500 to-emerald-400 rounded-full transition-all duration-500"
+                            style={{ width: `${progressPercent}%` }}
+                        />
+                    </div>
+                    <p className="text-[10px] text-zinc-400 mt-1.5 font-medium">
+                        {progressPercent}% tamamlandı
+                        {progressPercent === 100 && " · Tüm maddeler okundu!"}
+                    </p>
+                </div>
+            )}
+
             {/* Search Input */}
             <div className="relative">
                 <div className={`flex items-center gap-3 bg-white dark:bg-zinc-900 border-2 rounded-2xl transition-all duration-200 shadow-md ${
@@ -505,6 +568,8 @@ export function NativeRulesViewer({ type }: NativeRulesViewerProps) {
                         query={query}
                         defaultOpen={hasSearched}
                         matchedSectionIds={matchedSectionIds}
+                        isRead={localReadIds.has(article.id)}
+                        onOpen={() => handleArticleOpen(article.id)}
                     />
                 ))}
             </div>

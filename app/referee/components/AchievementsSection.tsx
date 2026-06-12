@@ -101,26 +101,27 @@ export function AchievementsSection() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const kuralVisited = !!localStorage.getItem("bks_rules_kural_visited");
-        const yorumVisited = !!localStorage.getItem("bks_rules_yorum_visited");
-
         fetch("/api/user/assignments")
             .then(r => r.json())
-            .then(assignments => {
-                if (Array.isArray(assignments)) {
-                    setData({
-                        completedAssignments: assignments.filter(a => a.isCompleted).length,
-                        totalAssignments: assignments.length,
-                        kuralVisited,
-                        yorumVisited,
-                    });
-                } else {
-                    setData(prev => ({ ...prev, kuralVisited, yorumVisited }));
-                }
+            .then(responseData => {
+                const assignments = Array.isArray(responseData)
+                    ? responseData
+                    : (responseData.assignments || []);
+                const kuralVisited = Array.isArray(responseData)
+                    ? false
+                    : !!responseData.kuralVisited;
+                const yorumVisited = Array.isArray(responseData)
+                    ? false
+                    : !!responseData.yorumVisited;
+
+                setData({
+                    completedAssignments: assignments.filter((a: { isCompleted: boolean }) => a.isCompleted).length,
+                    totalAssignments: assignments.length,
+                    kuralVisited,
+                    yorumVisited,
+                });
             })
-            .catch(() => {
-                setData(prev => ({ ...prev, kuralVisited, yorumVisited }));
-            })
+            .catch(() => {})
             .finally(() => setLoading(false));
     }, []);
 
@@ -177,7 +178,7 @@ export function AchievementsSection() {
             </div>
 
             {/* Achievements grid */}
-            <div className="p-5">
+            <div className="p-5 pb-8">
                 {earned.length > 0 && (
                     <div className="mb-4">
                         <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-3">Kazanıldı</p>

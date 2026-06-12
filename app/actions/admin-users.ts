@@ -442,6 +442,10 @@ export async function deleteUser(userId: number) {
             // 4. Video Progress
             await tx.videoProgress.deleteMany({ where: { userId: userId } });
 
+            // 4b. Rules Progress & Section Visits
+            await tx.ruleProgress.deleteMany({ where: { userId: userId } });
+            await tx.sectionVisit.deleteMany({ where: { userId: userId } });
+
             // 5. Chat Sessions
             await tx.message.deleteMany({ where: { session: { userId: userId } } });
             await tx.chatSession.deleteMany({ where: { userId: userId } });
