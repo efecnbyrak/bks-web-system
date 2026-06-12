@@ -1,138 +1,337 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import Link from "next/link";
 
-const CONFETTI_COLORS = [
-  "#dc2626", "#f59e0b", "#10b981", "#3b82f6", "#8b5cf6", "#f97316",
-];
+const BALL_RADIUS = 40;
+const GRAVITY = 0.45;
+const SPRING = 0.07;
+const FRICTION = 0.87;
+const BOUNCE = 0.48;
+const FLOOR_OFFSET = 80; // px from bottom of container
 
-function Confetti({ active }: { active: boolean }) {
-  if (!active) return null;
+// SVG basketbol topu
+function BallSVG() {
   return (
-    <div className="absolute inset-0 pointer-events-none overflow-hidden">
-      {Array.from({ length: 18 }).map((_, i) => (
-        <div
-          key={i}
-          className="absolute w-2 h-2 rounded-sm"
-          style={{
-            left: `${30 + Math.random() * 40}%`,
-            top: `${20 + Math.random() * 30}%`,
-            backgroundColor: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
-            animation: `confetti-fall ${0.6 + Math.random() * 0.6}s ease-out ${Math.random() * 0.3}s forwards`,
-          }}
-        />
-      ))}
-    </div>
+    <svg viewBox="0 0 80 80" width="80" height="80" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <radialGradient id="ballGrad" cx="38%" cy="35%" r="60%">
+          <stop offset="0%" stopColor="#fb923c" />
+          <stop offset="100%" stopColor="#c2410c" />
+        </radialGradient>
+        <clipPath id="ballClip">
+          <circle cx="40" cy="40" r="38" />
+        </clipPath>
+      </defs>
+      <circle cx="40" cy="40" r="38" fill="url(#ballGrad)" />
+      <g clipPath="url(#ballClip)" stroke="#1c0a00" strokeWidth="2.5" fill="none" opacity="0.7">
+        {/* Yatay orta çizgi */}
+        <path d="M2 40 Q40 52 78 40" />
+        <path d="M2 40 Q40 28 78 40" />
+        {/* Dikey orta çizgi */}
+        <path d="M40 2 Q52 40 40 78" />
+        <path d="M40 2 Q28 40 40 78" />
+      </g>
+      <circle cx="40" cy="40" r="38" fill="none" stroke="#c2410c" strokeWidth="0.5" opacity="0.4" />
+      {/* Parlama */}
+      <ellipse cx="30" cy="26" rx="10" ry="6" fill="white" opacity="0.18" transform="rotate(-30 30 26)" />
+    </svg>
   );
 }
 
-function BasketballHoop({ netAnimating }: { netAnimating: boolean }) {
+// Pota SVG
+function Hoop({ swaying }: { swaying: boolean }) {
   return (
-    <svg
-      width="120"
-      height="100"
-      viewBox="0 0 120 100"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className="drop-shadow-lg"
-    >
+    <svg width="140" height="120" viewBox="0 0 140 120" fill="none" xmlns="http://www.w3.org/2000/svg">
       {/* Backboard */}
-      <rect x="85" y="0" width="32" height="22" rx="2" fill="#e4e4e7" stroke="#a1a1aa" strokeWidth="1.5" />
-      <rect x="90" y="5" width="22" height="12" rx="1" fill="none" stroke="#dc2626" strokeWidth="1.5" />
-      {/* Pole arm */}
-      <line x1="101" y1="22" x2="68" y2="30" stroke="#71717a" strokeWidth="3" strokeLinecap="round" />
+      <rect x="95" y="2" width="40" height="28" rx="3" fill="#e4e4e7" stroke="#a1a1aa" strokeWidth="1.5" />
+      <rect x="101" y="8" width="28" height="16" rx="1.5" fill="none" stroke="#dc2626" strokeWidth="2" />
+      {/* Direk kolu */}
+      <line x1="115" y1="30" x2="75" y2="42" stroke="#71717a" strokeWidth="3.5" strokeLinecap="round" />
       {/* Rim */}
-      <ellipse cx="55" cy="32" rx="26" ry="5" fill="none" stroke="#dc2626" strokeWidth="4" strokeLinecap="round" />
-      {/* Net */}
-      <g className={netAnimating ? "net-animate" : ""} style={{ transformOrigin: "55px 32px" }}>
-        <line x1="34" y1="35" x2="38" y2="68" stroke="#d4d4d8" strokeWidth="1.2" />
-        <line x1="42" y1="36" x2="43" y2="70" stroke="#d4d4d8" strokeWidth="1.2" />
-        <line x1="50" y1="37" x2="50" y2="71" stroke="#d4d4d8" strokeWidth="1.2" />
-        <line x1="58" y1="37" x2="57" y2="71" stroke="#d4d4d8" strokeWidth="1.2" />
-        <line x1="66" y1="36" x2="63" y2="70" stroke="#d4d4d8" strokeWidth="1.2" />
-        <line x1="74" y1="35" x2="68" y2="68" stroke="#d4d4d8" strokeWidth="1.2" />
-        <line x1="34" y1="44" x2="74" y2="44" stroke="#d4d4d8" strokeWidth="1" />
-        <line x1="35" y1="54" x2="71" y2="54" stroke="#d4d4d8" strokeWidth="1" />
-        <line x1="37" y1="63" x2="67" y2="63" stroke="#d4d4d8" strokeWidth="1" />
-        <path d="M38 68 Q55 74 68 68" stroke="#d4d4d8" strokeWidth="1.2" fill="none" />
+      <ellipse cx="60" cy="44" rx="30" ry="6" fill="none" stroke="#dc2626" strokeWidth="4.5" strokeLinecap="round" />
+      {/* File */}
+      <g className={swaying ? "net-sway" : ""} style={{ transformOrigin: "60px 44px" }}>
+        <line x1="36" y1="48" x2="41" y2="88" stroke="#d4d4d8" strokeWidth="1.3" />
+        <line x1="46" y1="49" x2="48" y2="90" stroke="#d4d4d8" strokeWidth="1.3" />
+        <line x1="56" y1="50" x2="56" y2="91" stroke="#d4d4d8" strokeWidth="1.3" />
+        <line x1="66" y1="50" x2="64" y2="91" stroke="#d4d4d8" strokeWidth="1.3" />
+        <line x1="76" y1="49" x2="72" y2="90" stroke="#d4d4d8" strokeWidth="1.3" />
+        <line x1="84" y1="48" x2="77" y2="88" stroke="#d4d4d8" strokeWidth="1.3" />
+        <line x1="37" y1="58" x2="83" y2="58" stroke="#d4d4d8" strokeWidth="1" />
+        <line x1="38" y1="68" x2="81" y2="68" stroke="#d4d4d8" strokeWidth="1" />
+        <line x1="40" y1="78" x2="77" y2="78" stroke="#d4d4d8" strokeWidth="1" />
+        <path d="M41 88 Q60 96 77 88" stroke="#d4d4d8" strokeWidth="1.3" fill="none" />
       </g>
     </svg>
   );
 }
 
+interface Particle {
+  id: number;
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  color: string;
+  size: number;
+  life: number;
+}
+
+const PARTICLE_COLORS = ["#dc2626", "#f59e0b", "#10b981", "#3b82f6", "#f97316", "#8b5cf6"];
+
 export default function NotFoundClient() {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const ballRef = useRef<HTMLDivElement>(null);
+  const shadowRef = useRef<HTMLDivElement>(null);
+  const titleRef = useRef<HTMLHeadingElement>(null);
+  const hoopRef = useRef<HTMLDivElement>(null);
+
+  const physics = useRef({ x: 0, y: 0, vx: 2, vy: -3, rotation: 0 });
+  const mouse = useRef({ x: 0, y: 0 });
+  const initialized = useRef(false);
+  const rafRef = useRef<number>(0);
+
   const [score, setScore] = useState(0);
-  const [shooting, setShooting] = useState(false);
-  const [result, setResult] = useState<"none" | "score" | "miss">("none");
-  const [netAnimating, setNetAnimating] = useState(false);
-  const [confetti, setConfetti] = useState(false);
-  const [attempts, setAttempts] = useState(0);
+  const [swaying, setSwaying] = useState(false);
+  const [particles, setParticles] = useState<Particle[]>([]);
+  const [scorePop, setScorePop] = useState<{ x: number; y: number; id: number } | null>(null);
+  const particleId = useRef(0);
 
-  const shoot = useCallback(() => {
-    if (shooting) return;
-
-    const isScore = Math.random() < 0.55;
-    setShooting(true);
-    setResult(isScore ? "score" : "miss");
-    setAttempts((a) => a + 1);
-
-    if (isScore) {
-      setTimeout(() => {
-        setScore((s) => s + 2);
-        setNetAnimating(true);
-        setConfetti(true);
-        setTimeout(() => setNetAnimating(false), 1300);
-        setTimeout(() => setConfetti(false), 1000);
-      }, 650);
-    }
-
+  const spawnParticles = useCallback((x: number, y: number) => {
+    const newParticles: Particle[] = Array.from({ length: 8 }, () => {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 3 + Math.random() * 5;
+      return {
+        id: particleId.current++,
+        x,
+        y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - 3,
+        color: PARTICLE_COLORS[Math.floor(Math.random() * PARTICLE_COLORS.length)],
+        size: 5 + Math.random() * 7,
+        life: 1,
+      };
+    });
+    setParticles((prev) => [...prev, ...newParticles]);
     setTimeout(() => {
-      setShooting(false);
-      setResult("none");
-    }, 1100);
-  }, [shooting]);
+      setParticles((prev) => prev.filter((p) => !newParticles.find((n) => n.id === p.id)));
+    }, 900);
+  }, []);
 
-  const accuracy = attempts > 0 ? Math.round((score / 2 / attempts) * 100) : 0;
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    // Başlangıç pozisyonu: ortanın biraz altı
+    const rect = container.getBoundingClientRect();
+    physics.current.x = rect.width / 2;
+    physics.current.y = rect.height * 0.6;
+    mouse.current.x = rect.width / 2;
+    mouse.current.y = rect.height / 2;
+    initialized.current = true;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const r = container.getBoundingClientRect();
+      mouse.current.x = e.clientX - r.left;
+      mouse.current.y = e.clientY - r.top;
+
+      // 404 parallax: çok hafif ters yön
+      if (titleRef.current) {
+        const dx = (e.clientX - r.left - r.width / 2) / r.width;
+        const dy = (e.clientY - r.top - r.height / 2) / r.height;
+        titleRef.current.style.transform = `translate(${dx * -12}px, ${dy * -8}px)`;
+      }
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      const touch = e.touches[0];
+      const r = container.getBoundingClientRect();
+      mouse.current.x = touch.clientX - r.left;
+      mouse.current.y = touch.clientY - r.top;
+    };
+
+    container.addEventListener("mousemove", handleMouseMove);
+    container.addEventListener("touchmove", handleTouchMove, { passive: true });
+
+    const loop = () => {
+      const p = physics.current;
+      const m = mouse.current;
+      const rect = container.getBoundingClientRect();
+      const maxX = rect.width - BALL_RADIUS;
+      const maxY = rect.height - FLOOR_OFFSET;
+      const minX = BALL_RADIUS;
+      const minY = BALL_RADIUS;
+
+      // Spring kuvveti mouse'a doğru
+      const ax = (m.x - p.x) * SPRING;
+      const ay = (m.y - p.y) * SPRING;
+
+      p.vx = (p.vx + ax) * FRICTION;
+      p.vy = (p.vy + ay + GRAVITY) * FRICTION;
+
+      p.x += p.vx;
+      p.y += p.vy;
+
+      // Rotation: yatay hıza göre
+      p.rotation += p.vx * 1.8;
+
+      // Sınır: yatay
+      if (p.x > maxX) { p.x = maxX; p.vx *= -BOUNCE; }
+      if (p.x < minX) { p.x = minX; p.vx *= -BOUNCE; }
+      // Sınır: dikey
+      if (p.y > maxY) { p.y = maxY; p.vy *= -BOUNCE; }
+      if (p.y < minY) { p.y = minY; p.vy *= -BOUNCE; }
+
+      // DOM güncelle
+      if (ballRef.current) {
+        ballRef.current.style.transform = `translate(${p.x - BALL_RADIUS}px, ${p.y - BALL_RADIUS}px) rotate(${p.rotation}deg)`;
+      }
+
+      // Gölge: top yukarıda → küçük ve soluk, aşağıda → büyük ve koyu
+      if (shadowRef.current) {
+        const normalY = Math.min(1, Math.max(0, (p.y - minY) / (maxY - minY)));
+        const shadowScale = 0.3 + normalY * 0.7;
+        const shadowOpacity = 0.08 + normalY * 0.18;
+        shadowRef.current.style.transform = `translate(${p.x - 30}px, ${maxY + 8}px) scaleX(${shadowScale})`;
+        shadowRef.current.style.opacity = String(shadowOpacity);
+      }
+
+      rafRef.current = requestAnimationFrame(loop);
+    };
+
+    rafRef.current = requestAnimationFrame(loop);
+
+    return () => {
+      cancelAnimationFrame(rafRef.current);
+      container.removeEventListener("mousemove", handleMouseMove);
+      container.removeEventListener("touchmove", handleTouchMove);
+    };
+  }, []);
+
+  const handleBallClick = useCallback(() => {
+    const p = physics.current;
+    const container = containerRef.current;
+    const hoop = hoopRef.current;
+
+    // Yukarı fırlat
+    p.vy = -18;
+    p.vx += (Math.random() - 0.5) * 6;
+
+    spawnParticles(p.x, p.y);
+
+    // Pota yakınlık kontrolü
+    if (hoop && container) {
+      const hr = hoop.getBoundingClientRect();
+      const cr = container.getBoundingClientRect();
+      const hoopCenterX = hr.left - cr.left + hr.width / 2;
+      const hoopCenterY = hr.top - cr.top + 44; // rim y pozisyonu
+      const dist = Math.hypot(p.x - hoopCenterX, p.y - hoopCenterY);
+
+      if (dist < 120) {
+        // Sayı!
+        setTimeout(() => {
+          setScore((s) => s + 2);
+          setSwaying(true);
+          setScorePop({ x: hoopCenterX, y: hoopCenterY - 20, id: Date.now() });
+          setTimeout(() => setSwaying(false), 1500);
+          setTimeout(() => setScorePop(null), 900);
+        }, 350);
+      }
+    }
+  }, [spawnParticles]);
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    e.preventDefault();
+    handleBallClick();
+  }, [handleBallClick]);
 
   return (
-    <div className="min-h-screen bg-white dark:bg-zinc-950 flex flex-col items-center justify-center px-4 relative overflow-hidden">
-      {/* Subtle parquet background */}
+    <div
+      ref={containerRef}
+      className="relative w-full min-h-screen bg-white dark:bg-zinc-950 overflow-hidden select-none cursor-none"
+    >
+      {/* Parquet zemin */}
       <div
-        className="absolute inset-0 opacity-[0.03] dark:opacity-[0.06]"
+        className="absolute inset-0 opacity-[0.04] dark:opacity-[0.07] pointer-events-none"
         style={{
-          backgroundImage: `repeating-linear-gradient(
-            90deg,
-            #92400e 0px, #92400e 60px,
-            #b45309 60px, #b45309 62px
-          ), repeating-linear-gradient(
-            0deg,
-            #92400e 0px, #92400e 60px,
-            #b45309 60px, #b45309 62px
-          )`,
+          backgroundImage: `repeating-linear-gradient(90deg, #92400e 0px, #92400e 80px, #b45309 80px, #b45309 82px),
+            repeating-linear-gradient(0deg, #92400e 0px, #92400e 80px, #b45309 80px, #b45309 82px)`,
           backgroundBlendMode: "multiply",
         }}
       />
 
-      {/* Center court line */}
-      <div className="absolute top-1/2 left-0 right-0 h-px bg-amber-800/5 dark:bg-amber-600/10" />
+      {/* Merkez çizgisi */}
+      <div className="absolute top-1/2 left-0 right-0 h-px bg-amber-700/8 dark:bg-amber-500/10 pointer-events-none" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 rounded-full border border-amber-700/8 dark:border-amber-500/10 pointer-events-none" />
 
-      <div className="relative z-10 flex flex-col items-center gap-6 max-w-lg w-full text-center">
-        {/* Logo badge */}
-        <div className="flex items-center gap-2 bg-red-600 text-white px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-[0.2em]">
+      {/* Pota — sağ üst */}
+      <div ref={hoopRef} className="absolute top-8 right-8 md:top-12 md:right-16 pointer-events-none z-10">
+        <Hoop swaying={swaying} />
+      </div>
+
+      {/* Skor göstergesi */}
+      {score > 0 && (
+        <div className="absolute top-8 left-8 md:top-12 md:left-16 z-20 pointer-events-none">
+          <div className="bg-zinc-900/90 dark:bg-white/10 backdrop-blur-sm border border-zinc-700/50 dark:border-white/10 rounded-2xl px-4 py-2 text-center">
+            <p className="text-2xl font-black text-red-500">{score}</p>
+            <p className="text-[9px] font-bold uppercase tracking-widest text-zinc-400">Puan</p>
+          </div>
+        </div>
+      )}
+
+      {/* Score pop */}
+      {scorePop && (
+        <div
+          key={scorePop.id}
+          className="absolute pointer-events-none z-30 font-black text-emerald-500 text-xl"
+          style={{
+            left: scorePop.x,
+            top: scorePop.y,
+            transform: "translateX(-50%)",
+            animation: "score-burst 0.8s ease-out forwards",
+          }}
+        >
+          +2
+        </div>
+      )}
+
+      {/* Parçacıklar */}
+      {particles.map((pt) => (
+        <div
+          key={pt.id}
+          className="absolute pointer-events-none rounded-full z-20"
+          style={{
+            left: pt.x,
+            top: pt.y,
+            width: pt.size,
+            height: pt.size,
+            backgroundColor: pt.color,
+            transform: "translate(-50%, -50%)",
+            animation: "particle-fly 0.8s ease-out forwards",
+          }}
+        />
+      ))}
+
+      {/* Merkez içerik */}
+      <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-10">
+        {/* BKS badge */}
+        <div className="flex items-center gap-2 bg-red-600 text-white px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-[0.2em] mb-6 pointer-events-auto">
           <span>🏀</span>
           <span>BKS</span>
         </div>
 
-        {/* 404 */}
-        <div className="group cursor-default select-none">
-          <h1 className="text-[120px] md:text-[160px] font-black italic tracking-tighter leading-none text-red-600 transition-transform duration-300 group-hover:scale-105 drop-shadow-[0_4px_24px_rgba(220,38,38,0.3)]">
-            404
-          </h1>
-        </div>
+        {/* 404 — parallax ile hareket eder */}
+        <h1
+          ref={titleRef}
+          className="text-[110px] md:text-[150px] font-black italic tracking-tighter leading-none text-red-600 drop-shadow-[0_4px_32px_rgba(220,38,38,0.35)] transition-transform duration-75 ease-out"
+          style={{ willChange: "transform" }}
+        >
+          404
+        </h1>
 
-        <div className="-mt-4">
-          <p className="text-xl font-black italic tracking-tight text-zinc-900 dark:text-white">
+        <div className="text-center mt-1">
+          <p className="text-lg font-black italic tracking-tight text-zinc-900 dark:text-white">
             Sayfa bulunamadı
           </p>
           <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400 font-medium">
@@ -140,113 +339,41 @@ export default function NotFoundClient() {
           </p>
         </div>
 
-        {/* Game area */}
-        <div className="w-full bg-zinc-50 dark:bg-zinc-900 border-2 border-zinc-100 dark:border-zinc-800 rounded-[2rem] p-6 mt-2 relative overflow-hidden">
-          <Confetti active={confetti} />
+        <p className="mt-8 text-[10px] font-bold uppercase tracking-[0.25em] text-zinc-400 dark:text-zinc-600">
+          Topa tıkla veya mouse'u hareket ettir
+        </p>
 
-          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 dark:text-zinc-500 mb-4">
-            Bekleme sırasında oyna
-          </p>
-
-          {/* Hoop + ball area */}
-          <div className="relative h-40 flex items-end justify-center">
-            {/* Hoop — top right */}
-            <div className="absolute top-0 right-4 md:right-8">
-              <BasketballHoop netAnimating={netAnimating} />
-            </div>
-
-            {/* Ball */}
-            <button
-              onClick={shoot}
-              disabled={shooting}
-              className={[
-                "relative z-10 text-5xl transition-transform select-none",
-                "focus:outline-none focus-visible:ring-2 focus-visible:ring-red-600 rounded-full",
-                shooting ? "cursor-not-allowed opacity-80" : "cursor-pointer hover:scale-110 active:scale-95",
-                !shooting ? "ball-idle" : "",
-                result === "score" ? "ball-score" : "",
-                result === "miss" ? "ball-miss" : "",
-              ]
-                .filter(Boolean)
-                .join(" ")}
-              aria-label="Topa bas ve say"
-            >
-              🏀
-            </button>
-
-            {/* Result flash */}
-            {result === "score" && (
-              <div className="absolute bottom-0 left-1/2 -translate-x-1/2 mb-2 text-emerald-600 font-black text-sm animate-in fade-in slide-in-from-bottom-2 duration-200">
-                +2 SAYI ✓
-              </div>
-            )}
-            {result === "miss" && (
-              <div className="absolute bottom-0 left-1/2 -translate-x-1/2 mb-2 text-red-500 font-black text-sm animate-in fade-in slide-in-from-bottom-2 duration-200">
-                KAÇTI ✗
-              </div>
-            )}
-          </div>
-
-          {/* Stats */}
-          <div className="flex items-center justify-center gap-6 mt-4 pt-4 border-t border-zinc-100 dark:border-zinc-800">
-            <div className="text-center">
-              <p
-                className={[
-                  "text-3xl font-black text-red-600",
-                  result === "score" ? "score-animate" : "",
-                ].join(" ")}
-              >
-                {score}
-              </p>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mt-0.5">
-                Puan
-              </p>
-            </div>
-            <div className="w-px h-8 bg-zinc-200 dark:bg-zinc-700" />
-            <div className="text-center">
-              <p className="text-3xl font-black text-zinc-700 dark:text-zinc-300">
-                {attempts}
-              </p>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mt-0.5">
-                Deneme
-              </p>
-            </div>
-            <div className="w-px h-8 bg-zinc-200 dark:bg-zinc-700" />
-            <div className="text-center">
-              <p className="text-3xl font-black text-zinc-700 dark:text-zinc-300">
-                %{accuracy}
-              </p>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mt-0.5">
-                İsabet
-              </p>
-            </div>
-          </div>
-
-          {score >= 20 && (
-            <div className="mt-3 text-[11px] font-black text-amber-600 uppercase tracking-widest animate-in fade-in duration-500">
-              🏆 Harika skor! Gerçek maçlarda da bu kadar iyi misin?
-            </div>
-          )}
-
-          <p className="mt-3 text-[10px] text-zinc-400 dark:text-zinc-600">
-            Topa tıkla → say
-          </p>
-        </div>
-
-        {/* CTA */}
         <Link
           href="/"
-          className="inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 active:scale-95 text-white font-black text-sm uppercase tracking-[0.15em] px-6 py-3 rounded-2xl transition-all duration-200 shadow-lg shadow-red-600/30 hover:shadow-red-600/50"
+          className="mt-6 inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 active:scale-95 text-white font-black text-sm uppercase tracking-[0.15em] px-6 py-3 rounded-2xl transition-all duration-200 shadow-lg shadow-red-600/30 hover:shadow-red-600/50 pointer-events-auto"
         >
           Ana Sayfaya Dön
         </Link>
+      </div>
 
-        <p className="text-[11px] text-zinc-400 dark:text-zinc-600">
-          Hâlâ kaybolduysanız{" "}
-          <a href="mailto:destek@tbf.org.tr" className="underline hover:text-red-600 transition-colors">
-            destek ekibine yazın
-          </a>
-        </p>
+      {/* Top gölgesi */}
+      <div
+        ref={shadowRef}
+        className="absolute pointer-events-none z-0"
+        style={{
+          width: 60,
+          height: 12,
+          background: "radial-gradient(ellipse, rgba(0,0,0,0.5) 0%, transparent 70%)",
+          borderRadius: "50%",
+          transformOrigin: "center center",
+          opacity: 0.15,
+        }}
+      />
+
+      {/* Top */}
+      <div
+        ref={ballRef}
+        className="absolute z-20 cursor-pointer"
+        style={{ width: BALL_RADIUS * 2, height: BALL_RADIUS * 2, willChange: "transform" }}
+        onClick={handleBallClick}
+        onTouchStart={handleTouchStart}
+      >
+        <BallSVG />
       </div>
     </div>
   );
