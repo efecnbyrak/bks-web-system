@@ -3,377 +3,360 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import Link from "next/link";
 
-const BALL_RADIUS = 40;
-const GRAVITY = 0.45;
-const SPRING = 0.07;
-const FRICTION = 0.87;
-const BOUNCE = 0.48;
-const FLOOR_OFFSET = 80; // px from bottom of container
+// ─── Statik yıldız verisi (SSR-safe: useEffect içinde set edilir) ────────────
+interface Star {
+  x: number; y: number; size: number; opacity: number; twinkle: boolean; color: string;
+}
+const STAR_COLORS = ["#ffffff", "#ffffff", "#ffffff", "#bfdbfe", "#fef3c7", "#e0e7ff"];
 
-// SVG basketbol topu
-function BallSVG() {
+function makeStars(count: number, sizeRange: [number, number]): Star[] {
+  return Array.from({ length: count }, () => ({
+    x: Math.random() * 100,
+    y: Math.random() * 100,
+    size: sizeRange[0] + Math.random() * (sizeRange[1] - sizeRange[0]),
+    opacity: 0.4 + Math.random() * 0.6,
+    twinkle: Math.random() > 0.7,
+    color: STAR_COLORS[Math.floor(Math.random() * STAR_COLORS.length)],
+  }));
+}
+
+// ─── Astronot SVG ─────────────────────────────────────────────────────────────
+function Astronaut({ rotating }: { rotating: boolean }) {
   return (
-    <svg viewBox="0 0 80 80" width="80" height="80" xmlns="http://www.w3.org/2000/svg">
+    <svg width="120" height="140" viewBox="0 0 120 140" fill="none" xmlns="http://www.w3.org/2000/svg">
+      {/* Jet pack */}
+      <rect x="42" y="72" width="36" height="28" rx="6" fill="#52525b" />
+      <rect x="48" y="76" width="10" height="18" rx="3" fill="#3f3f46" />
+      <rect x="62" y="76" width="10" height="18" rx="3" fill="#3f3f46" />
+      {/* Vücut */}
+      <rect x="32" y="60" width="56" height="52" rx="14" fill="#e4e4e7" />
+      {/* BKS rozeti */}
+      <rect x="44" y="70" width="20" height="14" rx="3" fill="#dc2626" />
+      <text x="54" y="81" textAnchor="middle" fontSize="7" fontWeight="900" fill="white" fontFamily="Arial">BKS</text>
+      {/* Sol kol */}
+      <rect x="14" y="64" width="20" height="30" rx="9" fill="#e4e4e7" />
+      <circle cx="18" cy="97" r="7" fill="#d4d4d8" />
+      {/* Sağ kol */}
+      <rect x="86" y="64" width="20" height="30" rx="9" fill="#e4e4e7" />
+      <circle cx="102" cy="97" r="7" fill="#d4d4d8" />
+      {/* Sol bacak */}
+      <rect x="38" y="108" width="18" height="26" rx="8" fill="#e4e4e7" />
+      <rect x="34" y="128" width="22" height="10" rx="5" fill="#d4d4d8" />
+      {/* Sağ bacak */}
+      <rect x="64" y="108" width="18" height="26" rx="8" fill="#e4e4e7" />
+      <rect x="64" y="128" width="22" height="10" rx="5" fill="#d4d4d8" />
+      {/* Kask dış */}
+      <circle cx="60" cy="40" r="34" fill="#e4e4e7" />
+      {/* Vizör */}
+      <ellipse cx="60" cy="40" rx="22" ry="20" fill="#0ea5e9" opacity="0.85" />
+      <ellipse cx="60" cy="40" rx="22" ry="20" fill="url(#visorGrad)" />
+      {/* Yansıma */}
+      <ellipse cx="50" cy="30" rx="8" ry="5" fill="white" opacity="0.25" transform="rotate(-20 50 30)" />
+      {/* Kask çerçeve */}
+      <circle cx="60" cy="40" r="34" fill="none" stroke="#d4d4d8" strokeWidth="2.5" />
+      {/* Küçük detaylar */}
+      <rect x="26" y="60" width="8" height="4" rx="2" fill="#a1a1aa" />
+      <rect x="86" y="60" width="8" height="4" rx="2" fill="#a1a1aa" />
       <defs>
-        <radialGradient id="ballGrad" cx="38%" cy="35%" r="60%">
-          <stop offset="0%" stopColor="#fb923c" />
-          <stop offset="100%" stopColor="#c2410c" />
+        <radialGradient id="visorGrad" cx="40%" cy="35%" r="60%">
+          <stop offset="0%" stopColor="#7dd3fc" stopOpacity="0.6" />
+          <stop offset="100%" stopColor="#0369a1" stopOpacity="0.9" />
         </radialGradient>
-        <clipPath id="ballClip">
-          <circle cx="40" cy="40" r="38" />
-        </clipPath>
       </defs>
-      <circle cx="40" cy="40" r="38" fill="url(#ballGrad)" />
-      <g clipPath="url(#ballClip)" stroke="#1c0a00" strokeWidth="2.5" fill="none" opacity="0.7">
-        {/* Yatay orta çizgi */}
-        <path d="M2 40 Q40 52 78 40" />
-        <path d="M2 40 Q40 28 78 40" />
-        {/* Dikey orta çizgi */}
-        <path d="M40 2 Q52 40 40 78" />
-        <path d="M40 2 Q28 40 40 78" />
-      </g>
-      <circle cx="40" cy="40" r="38" fill="none" stroke="#c2410c" strokeWidth="0.5" opacity="0.4" />
-      {/* Parlama */}
-      <ellipse cx="30" cy="26" rx="10" ry="6" fill="white" opacity="0.18" transform="rotate(-30 30 26)" />
     </svg>
   );
 }
 
-// Pota SVG
-function Hoop({ swaying }: { swaying: boolean }) {
-  return (
-    <svg width="140" height="120" viewBox="0 0 140 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-      {/* Backboard */}
-      <rect x="95" y="2" width="40" height="28" rx="3" fill="#e4e4e7" stroke="#a1a1aa" strokeWidth="1.5" />
-      <rect x="101" y="8" width="28" height="16" rx="1.5" fill="none" stroke="#dc2626" strokeWidth="2" />
-      {/* Direk kolu */}
-      <line x1="115" y1="30" x2="75" y2="42" stroke="#71717a" strokeWidth="3.5" strokeLinecap="round" />
-      {/* Rim */}
-      <ellipse cx="60" cy="44" rx="30" ry="6" fill="none" stroke="#dc2626" strokeWidth="4.5" strokeLinecap="round" />
-      {/* File */}
-      <g className={swaying ? "net-sway" : ""} style={{ transformOrigin: "60px 44px" }}>
-        <line x1="36" y1="48" x2="41" y2="88" stroke="#d4d4d8" strokeWidth="1.3" />
-        <line x1="46" y1="49" x2="48" y2="90" stroke="#d4d4d8" strokeWidth="1.3" />
-        <line x1="56" y1="50" x2="56" y2="91" stroke="#d4d4d8" strokeWidth="1.3" />
-        <line x1="66" y1="50" x2="64" y2="91" stroke="#d4d4d8" strokeWidth="1.3" />
-        <line x1="76" y1="49" x2="72" y2="90" stroke="#d4d4d8" strokeWidth="1.3" />
-        <line x1="84" y1="48" x2="77" y2="88" stroke="#d4d4d8" strokeWidth="1.3" />
-        <line x1="37" y1="58" x2="83" y2="58" stroke="#d4d4d8" strokeWidth="1" />
-        <line x1="38" y1="68" x2="81" y2="68" stroke="#d4d4d8" strokeWidth="1" />
-        <line x1="40" y1="78" x2="77" y2="78" stroke="#d4d4d8" strokeWidth="1" />
-        <path d="M41 88 Q60 96 77 88" stroke="#d4d4d8" strokeWidth="1.3" fill="none" />
-      </g>
-    </svg>
-  );
+// ─── Jet parçacığı ────────────────────────────────────────────────────────────
+interface JetParticle {
+  id: number; x: number; y: number; jx: number; jy: number; color: string; size: number;
 }
-
-interface Particle {
-  id: number;
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  color: string;
-  size: number;
-  life: number;
-}
-
-const PARTICLE_COLORS = ["#dc2626", "#f59e0b", "#10b981", "#3b82f6", "#f97316", "#8b5cf6"];
+const JET_COLORS = ["#f59e0b", "#fb923c", "#fde68a", "#fed7aa", "#fbbf24"];
 
 export default function NotFoundClient() {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const ballRef = useRef<HTMLDivElement>(null);
-  const shadowRef = useRef<HTMLDivElement>(null);
+  const layer1Ref = useRef<HTMLDivElement>(null); // derin yıldızlar
+  const layer2Ref = useRef<HTMLDivElement>(null); // orta
+  const layer3Ref = useRef<HTMLDivElement>(null); // yakın
+  const astronautRef = useRef<HTMLDivElement>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);
-  const hoopRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  const physics = useRef({ x: 0, y: 0, vx: 2, vy: -3, rotation: 0 });
-  const mouse = useRef({ x: 0, y: 0 });
-  const initialized = useRef(false);
-  const rafRef = useRef<number>(0);
+  const [stars1, setStars1] = useState<Star[]>([]);
+  const [stars2, setStars2] = useState<Star[]>([]);
+  const [stars3, setStars3] = useState<Star[]>([]);
+  const [jetParticles, setJetParticles] = useState<JetParticle[]>([]);
+  const [launched, setLaunched] = useState(false);
+  const jetId = useRef(0);
 
-  const [score, setScore] = useState(0);
-  const [swaying, setSwaying] = useState(false);
-  const [particles, setParticles] = useState<Particle[]>([]);
-  const [scorePop, setScorePop] = useState<{ x: number; y: number; id: number } | null>(null);
-  const particleId = useRef(0);
-
-  const spawnParticles = useCallback((x: number, y: number) => {
-    const newParticles: Particle[] = Array.from({ length: 8 }, () => {
-      const angle = Math.random() * Math.PI * 2;
-      const speed = 3 + Math.random() * 5;
-      return {
-        id: particleId.current++,
-        x,
-        y,
-        vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed - 3,
-        color: PARTICLE_COLORS[Math.floor(Math.random() * PARTICLE_COLORS.length)],
-        size: 5 + Math.random() * 7,
-        life: 1,
-      };
-    });
-    setParticles((prev) => [...prev, ...newParticles]);
-    setTimeout(() => {
-      setParticles((prev) => prev.filter((p) => !newParticles.find((n) => n.id === p.id)));
-    }, 900);
+  // Yıldızları client'ta oluştur (SSR uyumu)
+  useEffect(() => {
+    setStars1(makeStars(280, [0.8, 1.5]));
+    setStars2(makeStars(120, [1.5, 2.5]));
+    setStars3(makeStars(40, [2.5, 4]));
   }, []);
 
+  // Mouse parallax
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
-    // Başlangıç pozisyonu: ortanın biraz altı
-    const rect = container.getBoundingClientRect();
-    physics.current.x = rect.width / 2;
-    physics.current.y = rect.height * 0.6;
-    mouse.current.x = rect.width / 2;
-    mouse.current.y = rect.height / 2;
-    initialized.current = true;
-
-    const handleMouseMove = (e: MouseEvent) => {
-      const r = container.getBoundingClientRect();
-      mouse.current.x = e.clientX - r.left;
-      mouse.current.y = e.clientY - r.top;
-
-      // 404 parallax: çok hafif ters yön
-      if (titleRef.current) {
-        const dx = (e.clientX - r.left - r.width / 2) / r.width;
-        const dy = (e.clientY - r.top - r.height / 2) / r.height;
-        titleRef.current.style.transform = `translate(${dx * -12}px, ${dy * -8}px)`;
-      }
-    };
-
-    const handleTouchMove = (e: TouchEvent) => {
-      const touch = e.touches[0];
-      const r = container.getBoundingClientRect();
-      mouse.current.x = touch.clientX - r.left;
-      mouse.current.y = touch.clientY - r.top;
-    };
-
-    container.addEventListener("mousemove", handleMouseMove);
-    container.addEventListener("touchmove", handleTouchMove, { passive: true });
-
-    const loop = () => {
-      const p = physics.current;
-      const m = mouse.current;
+    const handleMove = (clientX: number, clientY: number) => {
       const rect = container.getBoundingClientRect();
-      const maxX = rect.width - BALL_RADIUS;
-      const maxY = rect.height - FLOOR_OFFSET;
-      const minX = BALL_RADIUS;
-      const minY = BALL_RADIUS;
+      const cx = rect.width / 2;
+      const cy = rect.height / 2;
+      const dx = (clientX - rect.left - cx) / cx; // -1…1
+      const dy = (clientY - rect.top - cy) / cy;
 
-      // Spring kuvveti mouse'a doğru
-      const ax = (m.x - p.x) * SPRING;
-      const ay = (m.y - p.y) * SPRING;
+      if (layer1Ref.current) layer1Ref.current.style.transform = `translate(${dx * 3}px, ${dy * 3}px)`;
+      if (layer2Ref.current) layer2Ref.current.style.transform = `translate(${dx * 9}px, ${dy * 9}px)`;
+      if (layer3Ref.current) layer3Ref.current.style.transform = `translate(${dx * 20}px, ${dy * 20}px)`;
 
-      p.vx = (p.vx + ax) * FRICTION;
-      p.vy = (p.vy + ay + GRAVITY) * FRICTION;
-
-      p.x += p.vx;
-      p.y += p.vy;
-
-      // Rotation: yatay hıza göre
-      p.rotation += p.vx * 1.8;
-
-      // Sınır: yatay
-      if (p.x > maxX) { p.x = maxX; p.vx *= -BOUNCE; }
-      if (p.x < minX) { p.x = minX; p.vx *= -BOUNCE; }
-      // Sınır: dikey
-      if (p.y > maxY) { p.y = maxY; p.vy *= -BOUNCE; }
-      if (p.y < minY) { p.y = minY; p.vy *= -BOUNCE; }
-
-      // DOM güncelle
-      if (ballRef.current) {
-        ballRef.current.style.transform = `translate(${p.x - BALL_RADIUS}px, ${p.y - BALL_RADIUS}px) rotate(${p.rotation}deg)`;
+      // Astronot yüz döndürme
+      if (astronautRef.current) {
+        const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+        const tilt = Math.max(-18, Math.min(18, dx * 18));
+        astronautRef.current.style.setProperty("--astronaut-rotate", `${tilt}deg`);
       }
 
-      // Gölge: top yukarıda → küçük ve soluk, aşağıda → büyük ve koyu
-      if (shadowRef.current) {
-        const normalY = Math.min(1, Math.max(0, (p.y - minY) / (maxY - minY)));
-        const shadowScale = 0.3 + normalY * 0.7;
-        const shadowOpacity = 0.08 + normalY * 0.18;
-        shadowRef.current.style.transform = `translate(${p.x - 30}px, ${maxY + 8}px) scaleX(${shadowScale})`;
-        shadowRef.current.style.opacity = String(shadowOpacity);
+      // 404 hafif ters parallax
+      if (titleRef.current) {
+        titleRef.current.style.transform = `translate(${dx * -8}px, ${dy * -5}px)`;
       }
-
-      rafRef.current = requestAnimationFrame(loop);
     };
 
-    rafRef.current = requestAnimationFrame(loop);
+    const onMouse = (e: MouseEvent) => handleMove(e.clientX, e.clientY);
+    const onTouch = (e: TouchEvent) => {
+      const t = e.touches[0];
+      handleMove(t.clientX, t.clientY);
+    };
 
+    window.addEventListener("mousemove", onMouse);
+    window.addEventListener("touchmove", onTouch, { passive: true });
     return () => {
-      cancelAnimationFrame(rafRef.current);
-      container.removeEventListener("mousemove", handleMouseMove);
-      container.removeEventListener("touchmove", handleTouchMove);
+      window.removeEventListener("mousemove", onMouse);
+      window.removeEventListener("touchmove", onTouch);
     };
   }, []);
 
-  const handleBallClick = useCallback(() => {
-    const p = physics.current;
-    const container = containerRef.current;
-    const hoop = hoopRef.current;
+  // Astronota tıklama → jet fırlatma
+  const handleLaunch = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    if (launched) return;
+    setLaunched(true);
 
-    // Yukarı fırlat
-    p.vy = -18;
-    p.vx += (Math.random() - 0.5) * 6;
+    // Jet parçacıkları — astronotun alt orta noktasından aşağıya
+    const rect = ("touches" in e)
+      ? (e.currentTarget as HTMLElement).getBoundingClientRect()
+      : (e.currentTarget as HTMLElement).getBoundingClientRect();
 
-    spawnParticles(p.x, p.y);
+    const newParticles: JetParticle[] = Array.from({ length: 8 }, () => {
+      const angle = (Math.PI / 2) + (Math.random() - 0.5) * 0.8; // aşağı yönlü
+      const speed = 40 + Math.random() * 40;
+      return {
+        id: jetId.current++,
+        x: rect.left + rect.width / 2,
+        y: rect.top + rect.height,
+        jx: Math.cos(angle) * speed,
+        jy: Math.sin(angle) * speed,
+        color: JET_COLORS[Math.floor(Math.random() * JET_COLORS.length)],
+        size: 5 + Math.random() * 8,
+      };
+    });
+    setJetParticles(newParticles);
 
-    // Pota yakınlık kontrolü
-    if (hoop && container) {
-      const hr = hoop.getBoundingClientRect();
-      const cr = container.getBoundingClientRect();
-      const hoopCenterX = hr.left - cr.left + hr.width / 2;
-      const hoopCenterY = hr.top - cr.top + 44; // rim y pozisyonu
-      const dist = Math.hypot(p.x - hoopCenterX, p.y - hoopCenterY);
-
-      if (dist < 120) {
-        // Sayı!
-        setTimeout(() => {
-          setScore((s) => s + 2);
-          setSwaying(true);
-          setScorePop({ x: hoopCenterX, y: hoopCenterY - 20, id: Date.now() });
-          setTimeout(() => setSwaying(false), 1500);
-          setTimeout(() => setScorePop(null), 900);
-        }, 350);
-      }
-    }
-  }, [spawnParticles]);
-
-  const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    e.preventDefault();
-    handleBallClick();
-  }, [handleBallClick]);
+    setTimeout(() => {
+      setJetParticles([]);
+      setLaunched(false);
+    }, 700);
+  }, [launched]);
 
   return (
     <div
       ref={containerRef}
-      className="relative w-full min-h-screen bg-white dark:bg-zinc-950 overflow-hidden select-none cursor-none"
+      className="relative w-full min-h-screen overflow-hidden select-none"
+      style={{ background: "radial-gradient(ellipse at 50% 40%, #0f1729 0%, #030712 70%)" }}
     >
-      {/* Parquet zemin */}
+      {/* ── Yıldız katmanı 1: derin ── */}
+      <div ref={layer1Ref} className="absolute inset-0 pointer-events-none" style={{ willChange: "transform" }}>
+        {stars1.map((s, i) => (
+          <div
+            key={i}
+            className="absolute rounded-full"
+            style={{
+              left: `${s.x}%`, top: `${s.y}%`,
+              width: s.size, height: s.size,
+              backgroundColor: s.color,
+              opacity: s.opacity,
+              animation: s.twinkle ? `twinkle ${2 + Math.random() * 3}s ease-in-out ${Math.random() * 2}s infinite` : undefined,
+            }}
+          />
+        ))}
+      </div>
+
+      {/* ── Yıldız katmanı 2: orta ── */}
+      <div ref={layer2Ref} className="absolute inset-0 pointer-events-none" style={{ willChange: "transform" }}>
+        {stars2.map((s, i) => (
+          <div
+            key={i}
+            className="absolute rounded-full"
+            style={{
+              left: `${s.x}%`, top: `${s.y}%`,
+              width: s.size, height: s.size,
+              backgroundColor: s.color,
+              opacity: s.opacity,
+              animation: s.twinkle ? `twinkle ${1.5 + Math.random() * 2}s ease-in-out ${Math.random() * 2}s infinite` : undefined,
+            }}
+          />
+        ))}
+      </div>
+
+      {/* ── Yıldız katmanı 3: yakın ── */}
+      <div ref={layer3Ref} className="absolute inset-0 pointer-events-none" style={{ willChange: "transform" }}>
+        {stars3.map((s, i) => (
+          <div
+            key={i}
+            className="absolute rounded-full"
+            style={{
+              left: `${s.x}%`, top: `${s.y}%`,
+              width: s.size, height: s.size,
+              backgroundColor: s.color,
+              opacity: s.opacity,
+              boxShadow: `0 0 ${s.size * 2}px ${s.color}`,
+            }}
+          />
+        ))}
+      </div>
+
+      {/* ── Arka gezegen ── */}
       <div
-        className="absolute inset-0 opacity-[0.04] dark:opacity-[0.07] pointer-events-none"
+        className="absolute pointer-events-none planet-spin"
         style={{
-          backgroundImage: `repeating-linear-gradient(90deg, #92400e 0px, #92400e 80px, #b45309 80px, #b45309 82px),
-            repeating-linear-gradient(0deg, #92400e 0px, #92400e 80px, #b45309 80px, #b45309 82px)`,
-          backgroundBlendMode: "multiply",
+          width: 340, height: 340,
+          bottom: "-100px", right: "-80px",
+          background: "radial-gradient(circle at 35% 35%, #6d28d9, #1e1b4b 60%, #0f0a2e)",
+          borderRadius: "50%",
+          opacity: 0.35,
+          boxShadow: "inset -20px -20px 60px rgba(0,0,0,0.5), 0 0 60px rgba(109,40,217,0.15)",
+        }}
+      >
+        {/* Gezegen halkası */}
+        <div
+          className="absolute"
+          style={{
+            width: "160%", height: "30%",
+            top: "35%", left: "-30%",
+            border: "12px solid rgba(109,40,217,0.3)",
+            borderRadius: "50%",
+            transform: "rotateX(70deg)",
+          }}
+        />
+      </div>
+
+      {/* ── Küçük ay / cisim ── */}
+      <div
+        className="absolute pointer-events-none"
+        style={{
+          width: 60, height: 60,
+          top: "15%", left: "8%",
+          background: "radial-gradient(circle at 40% 40%, #a1a1aa, #52525b)",
+          borderRadius: "50%",
+          opacity: 0.5,
+          boxShadow: "inset -6px -6px 20px rgba(0,0,0,0.6)",
         }}
       />
 
-      {/* Merkez çizgisi */}
-      <div className="absolute top-1/2 left-0 right-0 h-px bg-amber-700/8 dark:bg-amber-500/10 pointer-events-none" />
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 rounded-full border border-amber-700/8 dark:border-amber-500/10 pointer-events-none" />
-
-      {/* Pota — sağ üst */}
-      <div ref={hoopRef} className="absolute top-8 right-8 md:top-12 md:right-16 pointer-events-none z-10">
-        <Hoop swaying={swaying} />
-      </div>
-
-      {/* Skor göstergesi */}
-      {score > 0 && (
-        <div className="absolute top-8 left-8 md:top-12 md:left-16 z-20 pointer-events-none">
-          <div className="bg-zinc-900/90 dark:bg-white/10 backdrop-blur-sm border border-zinc-700/50 dark:border-white/10 rounded-2xl px-4 py-2 text-center">
-            <p className="text-2xl font-black text-red-500">{score}</p>
-            <p className="text-[9px] font-bold uppercase tracking-widest text-zinc-400">Puan</p>
-          </div>
-        </div>
-      )}
-
-      {/* Score pop */}
-      {scorePop && (
+      {/* ── Jet parçacıkları ── */}
+      {jetParticles.map((p) => (
         <div
-          key={scorePop.id}
-          className="absolute pointer-events-none z-30 font-black text-emerald-500 text-xl"
+          key={p.id}
+          className="fixed pointer-events-none rounded-full z-50"
           style={{
-            left: scorePop.x,
-            top: scorePop.y,
-            transform: "translateX(-50%)",
-            animation: "score-burst 0.8s ease-out forwards",
-          }}
-        >
-          +2
-        </div>
-      )}
-
-      {/* Parçacıklar */}
-      {particles.map((pt) => (
-        <div
-          key={pt.id}
-          className="absolute pointer-events-none rounded-full z-20"
-          style={{
-            left: pt.x,
-            top: pt.y,
-            width: pt.size,
-            height: pt.size,
-            backgroundColor: pt.color,
+            left: p.x, top: p.y,
+            width: p.size, height: p.size,
+            backgroundColor: p.color,
             transform: "translate(-50%, -50%)",
-            animation: "particle-fly 0.8s ease-out forwards",
-          }}
+            "--jx": `${p.jx}px`,
+            "--jy": `${p.jy}px`,
+            animation: "jet-particle 0.65s ease-out forwards",
+          } as React.CSSProperties}
         />
       ))}
 
-      {/* Merkez içerik */}
-      <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-10">
-        {/* BKS badge */}
-        <div className="flex items-center gap-2 bg-red-600 text-white px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-[0.2em] mb-6 pointer-events-auto">
-          <span>🏀</span>
-          <span>BKS</span>
-        </div>
+      {/* ── Ana içerik ── */}
+      <div className="relative z-10 flex flex-col items-center justify-center min-h-screen px-4 py-12 text-center">
 
-        {/* 404 — parallax ile hareket eder */}
+        {/* 404 */}
         <h1
           ref={titleRef}
-          className="text-[110px] md:text-[150px] font-black italic tracking-tighter leading-none text-red-600 drop-shadow-[0_4px_32px_rgba(220,38,38,0.35)] transition-transform duration-75 ease-out"
-          style={{ willChange: "transform" }}
+          className="font-black italic tracking-tighter leading-none mb-2 transition-transform duration-75 ease-out"
+          style={{
+            fontSize: "clamp(80px, 18vw, 180px)",
+            color: "transparent",
+            WebkitTextStroke: "2px rgba(255,255,255,0.15)",
+            backgroundImage: "linear-gradient(135deg, #ffffff 0%, #94a3b8 50%, #475569 100%)",
+            WebkitBackgroundClip: "text",
+            backgroundClip: "text",
+            willChange: "transform",
+            filter: "drop-shadow(0 0 40px rgba(148,163,184,0.2))",
+          }}
         >
           404
         </h1>
 
-        <div className="text-center mt-1">
-          <p className="text-lg font-black italic tracking-tight text-zinc-900 dark:text-white">
-            Sayfa bulunamadı
-          </p>
-          <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400 font-medium">
-            Bu sayfa sahadan çıkmış, bir daha dönmeyebilir.
-          </p>
-        </div>
-
-        <p className="mt-8 text-[10px] font-bold uppercase tracking-[0.25em] text-zinc-400 dark:text-zinc-600">
-          Topa tıkla veya mouse'u hareket ettir
+        <p className="text-xl md:text-2xl font-black italic text-white mb-2 tracking-tight">
+          Kayboldu gitti.
+        </p>
+        <p className="text-sm text-slate-400 font-medium max-w-xs mb-10">
+          Bu sayfa sonsuz uzayda bir yerlerde süzülüyor olabilir.
         </p>
 
-        <Link
-          href="/"
-          className="mt-6 inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 active:scale-95 text-white font-black text-sm uppercase tracking-[0.15em] px-6 py-3 rounded-2xl transition-all duration-200 shadow-lg shadow-red-600/30 hover:shadow-red-600/50 pointer-events-auto"
+        {/* Astronot */}
+        <div
+          ref={astronautRef}
+          className="astronaut-float cursor-pointer mb-10"
+          style={{ willChange: "transform" }}
+          onClick={handleLaunch}
+          onTouchStart={handleLaunch}
         >
-          Ana Sayfaya Dön
-        </Link>
-      </div>
+          <Astronaut rotating={launched} />
+          {/* Jet alevi — tıklanınca */}
+          {launched && (
+            <div
+              className="absolute left-1/2 -translate-x-1/2"
+              style={{ bottom: -16 }}
+            >
+              <div
+                className="w-3 rounded-full"
+                style={{
+                  height: 28,
+                  background: "linear-gradient(to bottom, #fbbf24, #f97316, transparent)",
+                  animation: "jet-particle 0.5s ease-out forwards",
+                  "--jx": "0px",
+                  "--jy": "20px",
+                } as React.CSSProperties}
+              />
+            </div>
+          )}
+        </div>
 
-      {/* Top gölgesi */}
-      <div
-        ref={shadowRef}
-        className="absolute pointer-events-none z-0"
-        style={{
-          width: 60,
-          height: 12,
-          background: "radial-gradient(ellipse, rgba(0,0,0,0.5) 0%, transparent 70%)",
-          borderRadius: "50%",
-          transformOrigin: "center center",
-          opacity: 0.15,
-        }}
-      />
+        <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-slate-500 mb-6">
+          Astronota tıkla veya mouse'u hareket ettir
+        </p>
 
-      {/* Top */}
-      <div
-        ref={ballRef}
-        className="absolute z-20 cursor-pointer"
-        style={{ width: BALL_RADIUS * 2, height: BALL_RADIUS * 2, willChange: "transform" }}
-        onClick={handleBallClick}
-        onTouchStart={handleTouchStart}
-      >
-        <BallSVG />
+        {/* Butonlar */}
+        <div className="flex flex-col sm:flex-row items-center gap-3">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 active:scale-95 text-white font-black text-sm uppercase tracking-[0.12em] px-6 py-3 rounded-2xl transition-all duration-200 shadow-lg shadow-red-600/30 hover:shadow-red-600/50"
+          >
+            Ana Sayfaya Dön
+          </Link>
+          <button
+            onClick={() => window.history.back()}
+            className="inline-flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 active:scale-95 text-slate-300 font-black text-sm uppercase tracking-[0.12em] px-6 py-3 rounded-2xl transition-all duration-200"
+          >
+            Geri Git
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -21,25 +21,32 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
-@keyframes score-burst {
-  0%   { transform: scale(0) translateY(0); opacity: 1; }
-  60%  { transform: scale(1.2) translateY(-40px); opacity: 1; }
-  100% { transform: scale(1) translateY(-70px); opacity: 0; }
+@keyframes astronaut-float {
+  0%, 100% { transform: translateY(0px) rotate(var(--astronaut-rotate, 0deg)); }
+  50%       { transform: translateY(-18px) rotate(var(--astronaut-rotate, 0deg)); }
 }
 
-@keyframes particle-fly {
-  0%   { opacity: 1; }
-  100% { opacity: 0; }
+@keyframes planet-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
 }
 
-@keyframes net-sway {
-  0%, 100% { transform: skewX(0deg) scaleY(1); }
-  25%       { transform: skewX(12deg) scaleY(0.95); }
-  75%       { transform: skewX(-12deg) scaleY(0.95); }
+@keyframes jet-particle {
+  0%   { transform: translate(0, 0) scale(1); opacity: 0.9; }
+  100% { transform: translate(var(--jx, 0px), var(--jy, 0px)) scale(0); opacity: 0; }
 }
 
-.net-sway {
-  animation: net-sway 0.35s ease-in-out 4;
+@keyframes twinkle {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.3; }
+}
+
+.astronaut-float {
+  animation: astronaut-float 4s ease-in-out infinite;
+}
+
+.planet-spin {
+  animation: planet-spin 70s linear infinite;
 }
 
 @layer utilities {
