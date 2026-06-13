@@ -98,42 +98,6 @@ Sistem; haftalık uygunluk takvimleri, otomatik maç atamaları, sınav yönetim
 
 ---
 
-## 🏗 Mimari
-
-```
-tbf-app-ready/
-├── app/
-│   ├── (auth)/                 # Login, Register, Forgot Password
-│   ├── admin/                  # Admin paneli (SUPER_ADMIN, ADMIN_IHK)
-│   │   └── (dashboard)/        # Hakem, Maç, Sınav, Log yönetimi (20+ sayfa)
-│   ├── referee/                # Hakem paneli
-│   ├── general/                # Görevli paneli (Table, Observer, vb.)
-│   ├── basket/                 # AI Kural Arama (Gemini + Pinecone)
-│   └── api/                    # 42 REST API route
-│       ├── auth/               # Authentication
-│       ├── admin/              # Admin işlemleri
-│       ├── mobile/v2/          # Mobile API
-│       ├── rules/              # PDF arama & görüntüleme
-│       └── cron/               # Scheduled jobs
-├── prisma/
-│   ├── schema.prisma           # 38 model, PostgreSQL
-│   └── seed.ts
-├── lib/                        # Utilities, DB client, email, cache
-├── components/                 # Shared UI components
-└── data/
-    └── gameRules/              # PDF kural kitabı dosyaları
-```
-
-### Cron Jobs
-
-| Job | Schedule | Açıklama |
-|-----|----------|----------|
-| `availability-open` | Her Pazar 12:00 UTC | Uygunluk formunu açar |
-| `availability-close` | Her Salı 14:30 UTC | Uygunluk formunu kapatır |
-| `purge-old-logs` | Her ay 1. ve 15. gün 03:00 | Eski audit logları temizler |
-
----
-
 ## 🛠 Teknoloji Stack
 
 | Katman | Teknoloji |
