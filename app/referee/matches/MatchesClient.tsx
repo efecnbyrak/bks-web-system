@@ -1111,15 +1111,15 @@ export function MatchesClient({ firstName, lastName, initialMatches = [], initia
             {/* Filters */}
             {allMatches.length > 0 && (
                 <div className="space-y-2" ref={filterSectionRef}>
-                    <div className="overflow-x-auto pb-1">
+                    <div className="overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                         <div className="flex gap-2 min-w-max">
-                            <FilterTab active={filterMode === "all"} onClick={() => setFilterMode("all")} label={`🏀 Tümü (${allMatches.length})`} mobileLabel={`🏀 ${allMatches.length}`} />
-                            <FilterTab active={filterMode === "played"} onClick={() => setFilterMode("played")} label={`✅ Oynanmış (${playedMatches.length})`} mobileLabel={`✅ ${playedMatches.length}`} />
-                            <FilterTab active={filterMode === "upcoming"} onClick={() => setFilterMode("upcoming")} label={`📅 Gelecek (${upcomingMatches.length})`} mobileLabel={`📅 ${upcomingMatches.length}`} />
-                            {okulMatches.length > 0 && <FilterTab active={filterMode === "okul"} onClick={() => setFilterMode("okul")} label={`🏫 Okul (${okulMatches.length})`} mobileLabel={`🏫 ${okulMatches.length}`} />}
-                            {ozelMatches.length > 0 && <FilterTab active={filterMode === "ozel"} onClick={() => setFilterMode("ozel")} label={`🏆 Özel Lig (${ozelMatches.length})`} mobileLabel={`🏆 ${ozelMatches.length}`} />}
+                            <FilterTab active={filterMode === "all"} onClick={() => setFilterMode("all")} label={`🏀 Tümü (${allMatches.length})`} />
+                            <FilterTab active={filterMode === "played"} onClick={() => setFilterMode("played")} label={`✅ Oynanmış (${playedMatches.length})`} />
+                            <FilterTab active={filterMode === "upcoming"} onClick={() => setFilterMode("upcoming")} label={`📅 Gelecek (${upcomingMatches.length})`} />
+                            {okulMatches.length > 0 && <FilterTab active={filterMode === "okul"} onClick={() => setFilterMode("okul")} label={`🏫 Okul (${okulMatches.length})`} />}
+                            {ozelMatches.length > 0 && <FilterTab active={filterMode === "ozel"} onClick={() => setFilterMode("ozel")} label={`🏆 Özel Lig (${ozelMatches.length})`} />}
                             {haftaGroups.sortedWeeks.length > 0 && (
-                                <FilterTab active={filterMode === "hafta"} onClick={() => { setFilterMode("hafta"); if (!selectedHafta) setSelectedHafta(haftaGroups.sortedWeeks[haftaGroups.sortedWeeks.length - 1]); }} label={`📋 Hafta (${haftaGroups.sortedWeeks.length})`} mobileLabel={`📋 ${haftaGroups.sortedWeeks.length}`} />
+                                <FilterTab active={filterMode === "hafta"} onClick={() => { setFilterMode("hafta"); if (!selectedHafta) setSelectedHafta(haftaGroups.sortedWeeks[haftaGroups.sortedWeeks.length - 1]); }} label={`📋 Hafta (${haftaGroups.sortedWeeks.length})`} />
                             )}
                         </div>
                     </div>
@@ -1356,14 +1356,13 @@ function StatCard({ icon, value, label, gradient, onClick, small }: { icon: Reac
     );
 }
 
-function FilterTab({ active, onClick, label, mobileLabel }: { active: boolean; onClick: () => void; label: string; mobileLabel?: string }) {
+function FilterTab({ active, onClick, label }: { active: boolean; onClick: () => void; label: string }) {
     return (
         <button onClick={onClick}
-            className={`rounded-xl font-bold transition-all duration-150 whitespace-nowrap px-3 py-1.5 text-xs sm:px-4 sm:py-2 sm:text-sm ${active
-                ? "bg-gradient-to-r from-red-600 to-red-700 text-white shadow-md ring-2 ring-red-600/20 scale-[1.02]"
+            className={`rounded-full font-bold transition-all duration-150 whitespace-nowrap px-4 py-2 text-xs ${active
+                ? "bg-gradient-to-r from-red-600 to-red-700 text-white shadow-md ring-2 ring-red-600/20"
                 : "bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800/60 hover:border-red-300 dark:hover:border-red-700"}`}>
-            <span className="sm:hidden">{mobileLabel ?? label}</span>
-            <span className="hidden sm:inline">{label}</span>
+            {label}
         </button>
     );
 }

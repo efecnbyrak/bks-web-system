@@ -1,7 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Star, Trophy, BookOpen, Zap, Target, Award, Lock, Flame, Shield, Crown, Gem } from "lucide-react";
+import Link from "next/link";
+import { Star, Trophy, BookOpen, Zap, Target, Award, Lock, Flame, Shield, Crown, Gem, GraduationCap, CheckCircle, XCircle, ChevronRight } from "lucide-react";
+import { format } from "date-fns";
+import { tr } from "date-fns/locale";
+
+interface ExamAttempt {
+    id: number;
+    score: number;
+    totalQuestions: number;
+    difficulty: string | null;
+    createdAt: string;
+}
 
 interface Achievement {
     id: string;
@@ -24,6 +35,7 @@ interface AchievementData {
     totalAssignments: number;
     kuralVisited: boolean;
     yorumVisited: boolean;
+    examAttempts: ExamAttempt[];
 }
 
 const ACHIEVEMENTS: Achievement[] = [
@@ -115,14 +127,73 @@ const ACHIEVEMENTS: Achievement[] = [
         progress: (d) => ({ current: d.completedAssignments, max: Math.max(d.totalAssignments, 1) }),
         xp: 200,
     },
+    // Sınav başarıları
+    {
+        id: "ilk_sinav",
+        title: "Sınav Başlangıcı",
+        description: "İlk sınavını tamamla",
+        detail: "Her uzman bir kez başlangıç yapar",
+        icon: <GraduationCap className="w-6 h-6" />,
+        glowColor: "shadow-violet-400/40",
+        gradientFrom: "from-violet-500",
+        gradientTo: "to-purple-600",
+        ringColor: "ring-violet-400/30",
+        textColor: "text-violet-500",
+        condition: (d) => d.examAttempts.length >= 1,
+        progress: (d) => ({ current: Math.min(d.examAttempts.length, 1), max: 1 }),
+        xp: 50,
+    },
+    {
+        id: "sinav_gecti",
+        title: "Başarılı Hakem",
+        description: "Bir sınavda %80 veya üzeri al",
+        detail: "Yüksek performansın kanıtı",
+        icon: <CheckCircle className="w-6 h-6" />,
+        glowColor: "shadow-emerald-400/40",
+        gradientFrom: "from-emerald-500",
+        gradientTo: "to-green-600",
+        ringColor: "ring-emerald-400/30",
+        textColor: "text-emerald-500",
+        condition: (d) => d.examAttempts.some(a => (a.score / a.totalQuestions) >= 0.8),
+        xp: 100,
+    },
+    {
+        id: "uc_sinav",
+        title: "Denemeci",
+        description: "3 sınav tamamla",
+        detail: "Sürekli gelişim her adımda",
+        icon: <Star className="w-6 h-6" />,
+        glowColor: "shadow-indigo-400/40",
+        gradientFrom: "from-indigo-500",
+        gradientTo: "to-blue-600",
+        ringColor: "ring-indigo-400/30",
+        textColor: "text-indigo-500",
+        condition: (d) => d.examAttempts.length >= 3,
+        progress: (d) => ({ current: Math.min(d.examAttempts.length, 3), max: 3 }),
+        xp: 150,
+    },
+    {
+        id: "zor_sinav",
+        title: "Zorlu Yolu Seçen",
+        description: "Zor seviyede sınav tamamla",
+        detail: "Güçlükle büyürsün",
+        icon: <Trophy className="w-6 h-6" />,
+        glowColor: "shadow-red-400/40",
+        gradientFrom: "from-red-500",
+        gradientTo: "to-rose-600",
+        ringColor: "ring-red-400/30",
+        textColor: "text-red-500",
+        condition: (d) => d.examAttempts.some(a => a.difficulty === "Zor"),
+        xp: 200,
+    },
 ];
 
 const LEVELS = [
     { name: "Bronz", minXP: 0, maxXP: 100, icon: <Shield className="w-4 h-4" />, gradient: "from-amber-700 to-amber-500", ring: "ring-amber-600/40" },
     { name: "Gümüş", minXP: 100, maxXP: 300, icon: <Shield className="w-4 h-4" />, gradient: "from-zinc-400 to-zinc-300", ring: "ring-zinc-400/40" },
-    { name: "Altın", name2: "Altın", minXP: 300, maxXP: 560, icon: <Trophy className="w-4 h-4" />, gradient: "from-amber-400 to-yellow-300", ring: "ring-amber-400/40" },
-    { name: "Platin", minXP: 560, maxXP: 700, icon: <Crown className="w-4 h-4" />, gradient: "from-teal-400 to-cyan-300", ring: "ring-teal-400/40" },
-    { name: "Elmas", minXP: 700, maxXP: 760, icon: <Gem className="w-4 h-4" />, gradient: "from-sky-400 to-indigo-400", ring: "ring-sky-400/50" },
+    { name: "Altın", minXP: 300, maxXP: 760, icon: <Trophy className="w-4 h-4" />, gradient: "from-amber-400 to-yellow-300", ring: "ring-amber-400/40" },
+    { name: "Platin", minXP: 760, maxXP: 1060, icon: <Crown className="w-4 h-4" />, gradient: "from-teal-400 to-cyan-300", ring: "ring-teal-400/40" },
+    { name: "Elmas", minXP: 1060, maxXP: 1260, icon: <Gem className="w-4 h-4" />, gradient: "from-sky-400 to-indigo-400", ring: "ring-sky-400/50" },
 ];
 
 function getLevel(xp: number) {
@@ -225,29 +296,111 @@ function AchievementCard({ achievement, earned, data }: { achievement: Achieveme
     );
 }
 
+function getScoreStyle(score: number, total: number) {
+    const pct = (score / total) * 100;
+    if (pct >= 80) return { text: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-500/10", icon: <CheckCircle className="w-3.5 h-3.5" /> };
+    if (pct >= 60) return { text: "text-amber-600 dark:text-amber-400", bg: "bg-amber-500/10", icon: <CheckCircle className="w-3.5 h-3.5" /> };
+    return { text: "text-red-600 dark:text-red-400", bg: "bg-red-500/10", icon: <XCircle className="w-3.5 h-3.5" /> };
+}
+
+function ExamHistorySection({ attempts }: { attempts: ExamAttempt[] }) {
+    const shown = attempts.slice(0, 5);
+
+    return (
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden mt-4">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-100 dark:border-zinc-800">
+                <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center">
+                        <GraduationCap className="w-4 h-4 text-white" />
+                    </div>
+                    <div>
+                        <h3 className="text-sm font-black text-zinc-900 dark:text-white">Sınav Geçmişim</h3>
+                        <p className="text-[10px] text-zinc-400">{attempts.length} sınav tamamlandı</p>
+                    </div>
+                </div>
+                {attempts.length > 0 && (
+                    <Link href="/referee/results" className="flex items-center gap-1 text-[11px] font-bold text-violet-600 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300 transition-colors">
+                        Tümünü Gör <ChevronRight className="w-3.5 h-3.5" />
+                    </Link>
+                )}
+            </div>
+
+            {attempts.length === 0 ? (
+                <div className="flex flex-col items-center py-10 px-5 text-center">
+                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-100 to-indigo-100 dark:from-violet-900/30 dark:to-indigo-900/30 flex items-center justify-center mb-3">
+                        <GraduationCap className="w-7 h-7 text-violet-400" />
+                    </div>
+                    <p className="text-sm font-bold text-zinc-600 dark:text-zinc-400 mb-1">Henüz sınava girmedin</p>
+                    <p className="text-[11px] text-zinc-400 mb-4">Sınava girerek başarı rozetleri kazan ve kendini geliştir.</p>
+                    <Link href="/referee/exam" className="px-4 py-2 rounded-full bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-xs font-bold hover:opacity-90 transition-opacity shadow-sm">
+                        Sınava Gir
+                    </Link>
+                </div>
+            ) : (
+                <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                    {shown.map((attempt) => {
+                        const pct = Math.round((attempt.score / attempt.totalQuestions) * 100);
+                        const style = getScoreStyle(attempt.score, attempt.totalQuestions);
+                        return (
+                            <div key={attempt.id} className="flex items-center gap-3 px-5 py-3">
+                                <div className={`w-8 h-8 rounded-lg ${style.bg} flex items-center justify-center flex-shrink-0 ${style.text}`}>
+                                    {style.icon}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                        <span className={`text-sm font-black ${style.text}`}>{attempt.score}/{attempt.totalQuestions}</span>
+                                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${style.bg} ${style.text}`}>%{pct}</span>
+                                        {attempt.difficulty && (
+                                            <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-800 text-zinc-500">{attempt.difficulty}</span>
+                                        )}
+                                    </div>
+                                    <p className="text-[10px] text-zinc-400 mt-0.5">
+                                        {format(new Date(attempt.createdAt), "d MMM yyyy, HH:mm", { locale: tr })}
+                                    </p>
+                                </div>
+                            </div>
+                        );
+                    })}
+                    {attempts.length > 5 && (
+                        <div className="px-5 py-3 text-center">
+                            <Link href="/referee/results" className="text-[11px] font-bold text-violet-500 hover:text-violet-600 dark:text-violet-400 dark:hover:text-violet-300 transition-colors">
+                                +{attempts.length - 5} sınav daha → Tümünü Gör
+                            </Link>
+                        </div>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+}
+
 export function AchievementsSection() {
     const [data, setData] = useState<AchievementData>({
         completedAssignments: 0,
         totalAssignments: 0,
         kuralVisited: false,
         yorumVisited: false,
+        examAttempts: [],
     });
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        fetch("/api/user/assignments")
-            .then(r => r.json())
-            .then(responseData => {
-                const assignments = Array.isArray(responseData)
-                    ? responseData
-                    : (responseData.assignments || []);
-                const kuralVisited = Array.isArray(responseData) ? false : !!responseData.kuralVisited;
-                const yorumVisited = Array.isArray(responseData) ? false : !!responseData.yorumVisited;
+        Promise.all([
+            fetch("/api/user/assignments").then(r => r.json()),
+            fetch("/api/user/exam-history").then(r => r.json()),
+        ])
+            .then(([assignmentData, examData]) => {
+                const assignments = Array.isArray(assignmentData)
+                    ? assignmentData
+                    : (assignmentData.assignments || []);
+                const kuralVisited = Array.isArray(assignmentData) ? false : !!assignmentData.kuralVisited;
+                const yorumVisited = Array.isArray(assignmentData) ? false : !!assignmentData.yorumVisited;
                 setData({
                     completedAssignments: assignments.filter((a: { isCompleted: boolean }) => a.isCompleted).length,
                     totalAssignments: assignments.length,
                     kuralVisited,
                     yorumVisited,
+                    examAttempts: examData.attempts || [],
                 });
             })
             .catch(() => {})
@@ -290,102 +443,105 @@ export function AchievementsSection() {
     }
 
     return (
-        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden">
-            {/* Hero header */}
-            <div className="relative px-6 py-6 overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-br from-amber-50 via-white to-orange-50 dark:from-zinc-900 dark:via-zinc-900 dark:to-amber-950/20 pointer-events-none" />
-                <div className="absolute top-0 right-0 w-48 h-48 bg-gradient-to-bl from-amber-100/60 to-transparent dark:from-amber-900/10 rounded-bl-full pointer-events-none" />
+        <div>
+            <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden">
+                {/* Hero header */}
+                <div className="relative px-6 py-6 overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-br from-amber-50 via-white to-orange-50 dark:from-zinc-900 dark:via-zinc-900 dark:to-amber-950/20 pointer-events-none" />
+                    <div className="absolute top-0 right-0 w-48 h-48 bg-gradient-to-bl from-amber-100/60 to-transparent dark:from-amber-900/10 rounded-bl-full pointer-events-none" />
 
-                <div className="relative flex items-center gap-5">
-                    {/* Circular XP ring */}
-                    <div className="relative flex-shrink-0">
-                        <CircularProgress percent={xpPercent} size={84} stroke={7} gradient={level.gradient} />
-                        <div className={`absolute inset-0 flex flex-col items-center justify-center`}>
-                            <span className="text-[10px] font-black text-zinc-500 dark:text-zinc-400 leading-none">{totalXP}</span>
-                            <span className="text-[8px] text-zinc-400 leading-none mt-0.5">XP</span>
+                    <div className="relative flex items-center gap-5">
+                        <div className="relative flex-shrink-0">
+                            <CircularProgress percent={xpPercent} size={84} stroke={7} gradient={level.gradient} />
+                            <div className="absolute inset-0 flex flex-col items-center justify-center">
+                                <span className="text-[10px] font-black text-zinc-500 dark:text-zinc-400 leading-none">{totalXP}</span>
+                                <span className="text-[8px] text-zinc-400 leading-none mt-0.5">XP</span>
+                            </div>
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1.5">
+                                <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gradient-to-r ${level.gradient} shadow-sm`}>
+                                    <span className="text-white">{level.icon}</span>
+                                    <span className="text-[10px] font-black text-white tracking-wide">{level.name}</span>
+                                </div>
+                                <span className="text-xs text-zinc-400 font-medium">{earned.length}/{ACHIEVEMENTS.length} rozet</span>
+                            </div>
+                            <h3 className="text-base font-black text-zinc-900 dark:text-white leading-tight">Başarılar</h3>
+
+                            {nextLevel && (
+                                <div className="mt-2">
+                                    <div className="flex justify-between mb-1">
+                                        <span className="text-[9px] text-zinc-400 font-medium">{level.name} → {nextLevel.name}</span>
+                                        <span className="text-[9px] text-zinc-400">{xpInLevel}/{xpToNext} XP</span>
+                                    </div>
+                                    <div className="h-1.5 bg-zinc-200 dark:bg-zinc-700 rounded-full overflow-hidden">
+                                        <div
+                                            className={`h-full bg-gradient-to-r ${level.gradient} rounded-full transition-all duration-1000`}
+                                            style={{ width: `${Math.min(levelPct, 100)}%` }}
+                                        />
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="flex-shrink-0 text-right">
+                            <div className="text-2xl font-black text-amber-500 leading-none">{totalXP}</div>
+                            <div className="text-[9px] text-zinc-400 font-medium mt-0.5">/ {maxXP} XP</div>
                         </div>
                     </div>
 
-                    <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1.5">
-                            <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gradient-to-r ${level.gradient} shadow-sm`}>
-                                <span className="text-white">{level.icon}</span>
-                                <span className="text-[10px] font-black text-white tracking-wide">{level.name}</span>
+                    {nextRemaining !== null && nextUnearned && (
+                        <div className="relative mt-4 flex items-center gap-2 px-3 py-2 rounded-xl bg-white/70 dark:bg-zinc-800/50 border border-zinc-200/60 dark:border-zinc-700/40 backdrop-blur-sm">
+                            <div className={`w-5 h-5 rounded-lg bg-gradient-to-br ${nextUnearned.gradientFrom} ${nextUnearned.gradientTo} flex items-center justify-center flex-shrink-0`}>
+                                <span className="text-white scale-75">{nextUnearned.icon}</span>
                             </div>
-                            <span className="text-xs text-zinc-400 font-medium">{earned.length}/{ACHIEVEMENTS.length} rozet</span>
+                            <p className="text-[10px] text-zinc-600 dark:text-zinc-300">
+                                <span className="font-bold">{nextUnearned.title}</span> için{" "}
+                                <span className={`font-black ${nextUnearned.textColor}`}>{nextRemaining} {nextUnearned.id.includes("sinav") || nextUnearned.id.includes("ilk_sinav") ? "sınav" : "görev"}</span> daha tamamla
+                            </p>
                         </div>
-                        <h3 className="text-base font-black text-zinc-900 dark:text-white leading-tight">Başarılar</h3>
-
-                        {nextLevel && (
-                            <div className="mt-2">
-                                <div className="flex justify-between mb-1">
-                                    <span className="text-[9px] text-zinc-400 font-medium">{level.name} → {nextLevel.name}</span>
-                                    <span className="text-[9px] text-zinc-400">{xpInLevel}/{xpToNext} XP</span>
-                                </div>
-                                <div className="h-1.5 bg-zinc-200 dark:bg-zinc-700 rounded-full overflow-hidden">
-                                    <div
-                                        className={`h-full bg-gradient-to-r ${level.gradient} rounded-full transition-all duration-1000`}
-                                        style={{ width: `${Math.min(levelPct, 100)}%` }}
-                                    />
-                                </div>
-                            </div>
-                        )}
-                    </div>
-
-                    <div className="flex-shrink-0 text-right">
-                        <div className="text-2xl font-black text-amber-500 leading-none">{totalXP}</div>
-                        <div className="text-[9px] text-zinc-400 font-medium mt-0.5">/ {maxXP} XP</div>
-                    </div>
+                    )}
                 </div>
 
-                {/* Motivasyon mesajı */}
-                {nextRemaining !== null && nextUnearned && (
-                    <div className="relative mt-4 flex items-center gap-2 px-3 py-2 rounded-xl bg-white/70 dark:bg-zinc-800/50 border border-zinc-200/60 dark:border-zinc-700/40 backdrop-blur-sm">
-                        <div className={`w-5 h-5 rounded-lg bg-gradient-to-br ${nextUnearned.gradientFrom} ${nextUnearned.gradientTo} flex items-center justify-center flex-shrink-0`}>
-                            <span className="text-white scale-75">{nextUnearned.icon}</span>
+                <div className="border-t border-zinc-100 dark:border-zinc-800" />
+
+                {/* Achievements grid */}
+                <div className="p-5">
+                    {earned.length > 0 && (
+                        <div className="mb-5">
+                            <div className="flex items-center gap-2 mb-3">
+                                <div className="h-px flex-1 bg-zinc-100 dark:bg-zinc-800" />
+                                <span className="text-[9px] font-black text-zinc-400 uppercase tracking-widest px-2">Kazanıldı ({earned.length})</span>
+                                <div className="h-px flex-1 bg-zinc-100 dark:bg-zinc-800" />
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                {earned.map(a => (
+                                    <AchievementCard key={a.id} achievement={a} earned data={data} />
+                                ))}
+                            </div>
                         </div>
-                        <p className="text-[10px] text-zinc-600 dark:text-zinc-300">
-                            <span className="font-bold">{nextUnearned.title}</span> için{" "}
-                            <span className={`font-black ${nextUnearned.textColor}`}>{nextRemaining} görev</span> daha tamamla
-                        </p>
-                    </div>
-                )}
+                    )}
+
+                    {locked.length > 0 && (
+                        <div>
+                            <div className="flex items-center gap-2 mb-3">
+                                <div className="h-px flex-1 bg-zinc-100 dark:bg-zinc-800" />
+                                <span className="text-[9px] font-black text-zinc-400 uppercase tracking-widest px-2">Kilitli ({locked.length})</span>
+                                <div className="h-px flex-1 bg-zinc-100 dark:bg-zinc-800" />
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                {locked.map(a => (
+                                    <AchievementCard key={a.id} achievement={a} earned={false} data={data} />
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
             </div>
 
-            <div className="border-t border-zinc-100 dark:border-zinc-800" />
-
-            {/* Achievements grid */}
-            <div className="p-5">
-                {earned.length > 0 && (
-                    <div className="mb-5">
-                        <div className="flex items-center gap-2 mb-3">
-                            <div className="h-px flex-1 bg-zinc-100 dark:bg-zinc-800" />
-                            <span className="text-[9px] font-black text-zinc-400 uppercase tracking-widest px-2">Kazanıldı ({earned.length})</span>
-                            <div className="h-px flex-1 bg-zinc-100 dark:bg-zinc-800" />
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                            {earned.map(a => (
-                                <AchievementCard key={a.id} achievement={a} earned data={data} />
-                            ))}
-                        </div>
-                    </div>
-                )}
-
-                {locked.length > 0 && (
-                    <div>
-                        <div className="flex items-center gap-2 mb-3">
-                            <div className="h-px flex-1 bg-zinc-100 dark:bg-zinc-800" />
-                            <span className="text-[9px] font-black text-zinc-400 uppercase tracking-widest px-2">Kilitli ({locked.length})</span>
-                            <div className="h-px flex-1 bg-zinc-100 dark:bg-zinc-800" />
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                            {locked.map(a => (
-                                <AchievementCard key={a.id} achievement={a} earned={false} data={data} />
-                            ))}
-                        </div>
-                    </div>
-                )}
-            </div>
+            {/* Sınav Geçmişi */}
+            <ExamHistorySection attempts={data.examAttempts} />
         </div>
     );
 }
