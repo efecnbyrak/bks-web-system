@@ -25,7 +25,7 @@ function cleanupRateLimitMap() {
     }
 }
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
     const pathname = request.nextUrl.pathname;
 
     // Rate limiting for sensitive endpoints
