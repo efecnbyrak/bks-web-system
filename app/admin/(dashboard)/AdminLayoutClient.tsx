@@ -6,6 +6,7 @@ import { logout } from "@/app/actions/auth";
 import { Users, Calendar, LayoutDashboard, Settings, LogOut, Briefcase, History as LucideHistory, Megaphone, ClipboardList, CheckCircle, User, Trophy, Bell, TableProperties, Banknote, MoreHorizontal, X } from "lucide-react";
 import Image from "next/image";
 import { useState, useEffect } from "react";
+import { ROUTES } from "@/lib/routes";
 
 interface AdminLayoutClientProps {
     children: React.ReactNode;
@@ -21,7 +22,7 @@ export function AdminLayoutClient({ children, role, imageUrl }: AdminLayoutClien
     useEffect(() => {
         const checkNotifications = async () => {
             try {
-                const res = await fetch("/api/matches/notification");
+                const res = await fetch(ROUTES.API_MATCHES_NOTIFICATION);
                 const data = await res.json();
                 setHasNewMatches(data.hasNew);
             } catch (e) { }
@@ -32,7 +33,7 @@ export function AdminLayoutClient({ children, role, imageUrl }: AdminLayoutClien
     }, []);
 
     useEffect(() => {
-        if (pathname === "/admin/matches") setHasNewMatches(false);
+        if (pathname === ROUTES.ADMIN_MATCHES) setHasNewMatches(false);
     }, [pathname]);
 
     // iOS scroll lock for drawer
@@ -52,7 +53,7 @@ export function AdminLayoutClient({ children, role, imageUrl }: AdminLayoutClien
     }, [pathname]);
 
     const isActive = (path: string) => {
-        if (path === "/admin") return pathname === "/admin";
+        if (path === ROUTES.ADMIN) return pathname === ROUTES.ADMIN;
         return pathname.startsWith(path);
     };
 
@@ -89,9 +90,9 @@ export function AdminLayoutClient({ children, role, imageUrl }: AdminLayoutClien
 
                     <nav className="flex-1 space-y-1 overflow-y-auto pr-2 modern-scrollbar pb-10">
                         <Link
-                            href="/admin"
+                            href={ROUTES.ADMIN}
                             prefetch={false}
-                            className={`flex items-center gap-3 px-4 py-2.5 rounded-xl font-medium transition-all text-[16px] ${isActive("/admin")
+                            className={`flex items-center gap-3 px-4 py-2.5 rounded-xl font-medium transition-all text-[16px] ${isActive(ROUTES.ADMIN)
                                 ? "bg-red-700 text-white shadow-md border-l-4 border-red-900"
                                 : "hover:bg-zinc-800/50 text-zinc-400 hover:text-white"
                                 }`}
@@ -105,9 +106,9 @@ export function AdminLayoutClient({ children, role, imageUrl }: AdminLayoutClien
                         </div>
 
                         <Link
-                            href="/admin/referees"
+                            href={ROUTES.ADMIN_REFEREES}
                             prefetch={false}
-                            className={`flex items-center gap-3 px-4 py-2.5 rounded-xl font-medium transition-all text-[16px] ${isActive("/admin/referees")
+                            className={`flex items-center gap-3 px-4 py-2.5 rounded-xl font-medium transition-all text-[16px] ${isActive(ROUTES.ADMIN_REFEREES)
                                 ? "bg-red-700 text-white shadow-md border-l-4 border-red-900"
                                 : "hover:bg-zinc-800/50 text-zinc-400 hover:text-white"
                                 }`}
@@ -117,9 +118,9 @@ export function AdminLayoutClient({ children, role, imageUrl }: AdminLayoutClien
                         </Link>
 
                         <Link
-                            href="/admin/officials"
+                            href={ROUTES.ADMIN_OFFICIALS}
                             prefetch={false}
-                            className={`flex items-center gap-3 px-4 py-2.5 rounded-xl font-medium transition-all text-[16px] ${isActive("/admin/officials")
+                            className={`flex items-center gap-3 px-4 py-2.5 rounded-xl font-medium transition-all text-[16px] ${isActive(ROUTES.ADMIN_OFFICIALS)
                                 ? "bg-red-700 text-white shadow-md border-l-4 border-red-900"
                                 : "hover:bg-zinc-800/50 text-zinc-400 hover:text-white"
                                 }`}
@@ -129,9 +130,9 @@ export function AdminLayoutClient({ children, role, imageUrl }: AdminLayoutClien
                         </Link>
 
                         <Link
-                            href="/admin/all-availabilities"
+                            href={ROUTES.ADMIN_ALL_AVAILABILITIES}
                             prefetch={false}
-                            className={`flex items-center gap-3 px-4 py-2.5 rounded-xl font-medium transition-all text-[16px] ${isActive("/admin/all-availabilities")
+                            className={`flex items-center gap-3 px-4 py-2.5 rounded-xl font-medium transition-all text-[16px] ${isActive(ROUTES.ADMIN_ALL_AVAILABILITIES)
                                 ? "bg-red-700 text-white shadow-md border-l-4 border-red-900"
                                 : "hover:bg-zinc-800/50 text-zinc-400 hover:text-white"
                                 }`}
@@ -142,9 +143,9 @@ export function AdminLayoutClient({ children, role, imageUrl }: AdminLayoutClien
 
                         {(role === "OBSERVER" || role === "ADMIN") && (
                             <Link
-                                href="/referee/reports/new"
+                                href={ROUTES.REFEREE_REPORTS_NEW}
                                 prefetch={false}
-                                className={`flex items-center gap-3 px-4 py-2.5 rounded-xl font-medium transition-all text-[16px] ${pathname === "/referee/reports/new"
+                                className={`flex items-center gap-3 px-4 py-2.5 rounded-xl font-medium transition-all text-[16px] ${pathname === ROUTES.REFEREE_REPORTS_NEW
                                     ? "bg-red-700 text-white shadow-md border-l-4 border-red-900"
                                     : "hover:bg-zinc-800/50 text-zinc-400 hover:text-white"
                                     }`}
@@ -155,9 +156,9 @@ export function AdminLayoutClient({ children, role, imageUrl }: AdminLayoutClien
                         )}
 
                         <Link
-                            href="/admin/observer-reports"
+                            href={ROUTES.ADMIN_OBSERVER_REPORTS}
                             prefetch={false}
-                            className={`flex items-center gap-3 px-4 py-2.5 rounded-xl font-medium transition-all text-[16px] ${isActive("/admin/observer-reports")
+                            className={`flex items-center gap-3 px-4 py-2.5 rounded-xl font-medium transition-all text-[16px] ${isActive(ROUTES.ADMIN_OBSERVER_REPORTS)
                                 ? "bg-red-700 text-white shadow-md border-l-4 border-red-900"
                                 : "hover:bg-zinc-800/50 text-zinc-400 hover:text-white"
                                 }`}
@@ -167,9 +168,9 @@ export function AdminLayoutClient({ children, role, imageUrl }: AdminLayoutClien
                         </Link>
 
                         <Link
-                            href="/admin/announcements"
+                            href={ROUTES.ADMIN_ANNOUNCEMENTS}
                             prefetch={false}
-                            className={`flex items-center gap-3 px-4 py-2.5 rounded-xl font-medium transition-all text-[16px] ${isActive("/admin/announcements")
+                            className={`flex items-center gap-3 px-4 py-2.5 rounded-xl font-medium transition-all text-[16px] ${isActive(ROUTES.ADMIN_ANNOUNCEMENTS)
                                 ? "bg-red-700 text-white shadow-md border-l-4 border-red-900"
                                 : "hover:bg-zinc-800/50 text-zinc-400 hover:text-white"
                                 }`}
@@ -179,9 +180,9 @@ export function AdminLayoutClient({ children, role, imageUrl }: AdminLayoutClien
                         </Link>
 
                         <Link
-                            href="/admin/approvals"
+                            href={ROUTES.ADMIN_APPROVALS}
                             prefetch={false}
-                            className={`flex items-center gap-3 px-4 py-2.5 rounded-xl font-medium transition-all text-[16px] ${isActive("/admin/approvals")
+                            className={`flex items-center gap-3 px-4 py-2.5 rounded-xl font-medium transition-all text-[16px] ${isActive(ROUTES.ADMIN_APPROVALS)
                                 ? "bg-red-700 text-white shadow-md border-l-4 border-red-900"
                                 : "hover:bg-zinc-800/50 text-zinc-400 hover:text-white"
                                 }`}
@@ -191,9 +192,9 @@ export function AdminLayoutClient({ children, role, imageUrl }: AdminLayoutClien
                         </Link>
 
                         <Link
-                            href="/admin/bag"
+                            href={ROUTES.ADMIN_BAG}
                             prefetch={false}
-                            className={`flex items-center gap-3 px-4 py-2.5 rounded-xl font-medium transition-all text-[16px] ${isActive("/admin/bag")
+                            className={`flex items-center gap-3 px-4 py-2.5 rounded-xl font-medium transition-all text-[16px] ${isActive(ROUTES.ADMIN_BAG)
                                 ? "bg-red-700 text-white shadow-md border-l-4 border-red-900"
                                 : "hover:bg-zinc-800/50 text-zinc-400 hover:text-white"
                                 }`}
@@ -204,9 +205,9 @@ export function AdminLayoutClient({ children, role, imageUrl }: AdminLayoutClien
 
                         {role === "SUPER_ADMIN" && (
                             <Link
-                                href="/admin/atamalar"
+                                href={ROUTES.ADMIN_ATAMALAR}
                                 prefetch={false}
-                                className={`flex items-center gap-3 px-4 py-2.5 rounded-xl font-medium transition-all text-[16px] ${isActive("/admin/atamalar")
+                                className={`flex items-center gap-3 px-4 py-2.5 rounded-xl font-medium transition-all text-[16px] ${isActive(ROUTES.ADMIN_ATAMALAR)
                                     ? "bg-red-700 text-white shadow-md border-l-4 border-red-900"
                                     : "hover:bg-zinc-800/50 text-zinc-400 hover:text-white"
                                     }`}
@@ -218,9 +219,9 @@ export function AdminLayoutClient({ children, role, imageUrl }: AdminLayoutClien
 
                         {role === "SUPER_ADMIN" && (
                             <Link
-                                href="/admin/user-matches"
+                                href={ROUTES.ADMIN_USER_MATCHES}
                                 prefetch={false}
-                                className={`flex items-center gap-3 px-4 py-2.5 rounded-xl font-medium transition-all text-[16px] ${isActive("/admin/user-matches")
+                                className={`flex items-center gap-3 px-4 py-2.5 rounded-xl font-medium transition-all text-[16px] ${isActive(ROUTES.ADMIN_USER_MATCHES)
                                     ? "bg-red-700 text-white shadow-md border-l-4 border-red-900"
                                     : "hover:bg-zinc-800/50 text-zinc-400 hover:text-white"
                                     }`}
@@ -232,9 +233,9 @@ export function AdminLayoutClient({ children, role, imageUrl }: AdminLayoutClien
 
                         {role === "SUPER_ADMIN" && (
                             <Link
-                                href="/admin/payments"
+                                href={ROUTES.ADMIN_PAYMENTS}
                                 prefetch={false}
-                                className={`flex items-center gap-3 px-4 py-2.5 rounded-xl font-medium transition-all text-[16px] ${isActive("/admin/payments")
+                                className={`flex items-center gap-3 px-4 py-2.5 rounded-xl font-medium transition-all text-[16px] ${isActive(ROUTES.ADMIN_PAYMENTS)
                                     ? "bg-red-700 text-white shadow-md border-l-4 border-red-900"
                                     : "hover:bg-zinc-800/50 text-zinc-400 hover:text-white"
                                     }`}
@@ -250,9 +251,9 @@ export function AdminLayoutClient({ children, role, imageUrl }: AdminLayoutClien
 
                         {role === "SUPER_ADMIN" && (
                             <Link
-                                href="/admin/logs"
+                                href={ROUTES.ADMIN_LOGS}
                                 prefetch={false}
-                                className={`flex items-center gap-3 px-4 py-2.5 rounded-xl font-medium transition-all text-[15px] ${isActive("/admin/logs")
+                                className={`flex items-center gap-3 px-4 py-2.5 rounded-xl font-medium transition-all text-[15px] ${isActive(ROUTES.ADMIN_LOGS)
                                     ? "bg-red-700 text-white shadow-md border-l-4 border-red-900"
                                     : "hover:bg-zinc-800/50 text-zinc-400 hover:text-white"
                                     }`}
@@ -264,9 +265,9 @@ export function AdminLayoutClient({ children, role, imageUrl }: AdminLayoutClien
 
                         {role === "SUPER_ADMIN" && (
                             <Link
-                                href="/admin/settings"
+                                href={ROUTES.ADMIN_SETTINGS}
                                 prefetch={false}
-                                className={`flex items-center gap-3 px-4 py-2.5 rounded-xl font-medium transition-all text-[15px] ${isActive("/admin/settings")
+                                className={`flex items-center gap-3 px-4 py-2.5 rounded-xl font-medium transition-all text-[15px] ${isActive(ROUTES.ADMIN_SETTINGS)
                                     ? "bg-red-700 text-white shadow-md border-l-4 border-red-900"
                                     : "hover:bg-zinc-800/50 text-zinc-400 hover:text-white"
                                     }`}
@@ -292,28 +293,28 @@ export function AdminLayoutClient({ children, role, imageUrl }: AdminLayoutClien
             {/* Mobile Bottom Nav Bar */}
             <nav className="fixed bottom-0 inset-x-0 z-[100] md:hidden bg-zinc-900 border-t border-zinc-800" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
                 <div className="flex items-stretch h-16">
-                    <Link href="/admin" prefetch={false} className={bottomItem(isActive("/admin") && pathname === "/admin")}>
+                    <Link href={ROUTES.ADMIN} prefetch={false} className={bottomItem(isActive(ROUTES.ADMIN) && pathname === ROUTES.ADMIN)}>
                         <LayoutDashboard className="w-5 h-5" />
                         <span className="text-[10px] font-medium">Dashboard</span>
-                        {isActive("/admin") && pathname === "/admin" && <span className="absolute bottom-1.5 w-1 h-1 rounded-full bg-red-500" />}
+                        {isActive(ROUTES.ADMIN) && pathname === ROUTES.ADMIN && <span className="absolute bottom-1.5 w-1 h-1 rounded-full bg-red-500" />}
                     </Link>
 
-                    <Link href="/admin/referees" prefetch={false} className={bottomItem(isActive("/admin/referees"))}>
+                    <Link href={ROUTES.ADMIN_REFEREES} prefetch={false} className={bottomItem(isActive(ROUTES.ADMIN_REFEREES))}>
                         <Users className="w-5 h-5" />
                         <span className="text-[10px] font-medium">Hakemler</span>
-                        {isActive("/admin/referees") && <span className="absolute bottom-1.5 w-1 h-1 rounded-full bg-red-500" />}
+                        {isActive(ROUTES.ADMIN_REFEREES) && <span className="absolute bottom-1.5 w-1 h-1 rounded-full bg-red-500" />}
                     </Link>
 
-                    <Link href="/admin/approvals" prefetch={false} className={bottomItem(isActive("/admin/approvals"))}>
+                    <Link href={ROUTES.ADMIN_APPROVALS} prefetch={false} className={bottomItem(isActive(ROUTES.ADMIN_APPROVALS))}>
                         <CheckCircle className="w-5 h-5" />
                         <span className="text-[10px] font-medium">Onaylar</span>
-                        {isActive("/admin/approvals") && <span className="absolute bottom-1.5 w-1 h-1 rounded-full bg-red-500" />}
+                        {isActive(ROUTES.ADMIN_APPROVALS) && <span className="absolute bottom-1.5 w-1 h-1 rounded-full bg-red-500" />}
                     </Link>
 
-                    <Link href="/admin/announcements" prefetch={false} className={bottomItem(isActive("/admin/announcements"))}>
+                    <Link href={ROUTES.ADMIN_ANNOUNCEMENTS} prefetch={false} className={bottomItem(isActive(ROUTES.ADMIN_ANNOUNCEMENTS))}>
                         <Megaphone className="w-5 h-5" />
                         <span className="text-[10px] font-medium">Duyurular</span>
-                        {isActive("/admin/announcements") && <span className="absolute bottom-1.5 w-1 h-1 rounded-full bg-red-500" />}
+                        {isActive(ROUTES.ADMIN_ANNOUNCEMENTS) && <span className="absolute bottom-1.5 w-1 h-1 rounded-full bg-red-500" />}
                     </Link>
 
                     <button onClick={() => setIsMoreOpen(true)} className={bottomItem(false)}>
@@ -341,28 +342,28 @@ export function AdminLayoutClient({ children, role, imageUrl }: AdminLayoutClien
                 </div>
 
                 <div className="px-4 pb-8 space-y-1 overflow-y-auto max-h-[75vh]" style={{ paddingBottom: 'calc(2rem + env(safe-area-inset-bottom))' }}>
-                    <Link href="/admin/officials" onClick={() => setIsMoreOpen(false)} prefetch={false} className={drawerLink(isActive("/admin/officials"))}>
+                    <Link href={ROUTES.ADMIN_OFFICIALS} onClick={() => setIsMoreOpen(false)} prefetch={false} className={drawerLink(isActive(ROUTES.ADMIN_OFFICIALS))}>
                         <Briefcase className="w-4 h-4" />
                         Genel Görevliler
                     </Link>
 
-                    <Link href="/admin/all-availabilities" onClick={() => setIsMoreOpen(false)} prefetch={false} className={drawerLink(isActive("/admin/all-availabilities"))}>
+                    <Link href={ROUTES.ADMIN_ALL_AVAILABILITIES} onClick={() => setIsMoreOpen(false)} prefetch={false} className={drawerLink(isActive(ROUTES.ADMIN_ALL_AVAILABILITIES))}>
                         <Calendar className="w-4 h-4 text-blue-400" />
                         Uygunluklar
                     </Link>
 
-                    <Link href="/admin/observer-reports" onClick={() => setIsMoreOpen(false)} prefetch={false} className={drawerLink(isActive("/admin/observer-reports"))}>
+                    <Link href={ROUTES.ADMIN_OBSERVER_REPORTS} onClick={() => setIsMoreOpen(false)} prefetch={false} className={drawerLink(isActive(ROUTES.ADMIN_OBSERVER_REPORTS))}>
                         <ClipboardList className="w-4 h-4 text-orange-400" />
                         Gözlemci Raporları
                     </Link>
 
-                    <Link href="/admin/bag" onClick={() => setIsMoreOpen(false)} prefetch={false} className={drawerLink(isActive("/admin/bag"))}>
+                    <Link href={ROUTES.ADMIN_BAG} onClick={() => setIsMoreOpen(false)} prefetch={false} className={drawerLink(isActive(ROUTES.ADMIN_BAG))}>
                         <Briefcase className="w-4 h-4 text-red-500" />
                         Hakem Çantası
                     </Link>
 
                     {(role === "OBSERVER" || role === "ADMIN") && (
-                        <Link href="/referee/reports/new" onClick={() => setIsMoreOpen(false)} prefetch={false} className={drawerLink(pathname === "/referee/reports/new")}>
+                        <Link href={ROUTES.REFEREE_REPORTS_NEW} onClick={() => setIsMoreOpen(false)} prefetch={false} className={drawerLink(pathname === ROUTES.REFEREE_REPORTS_NEW)}>
                             <ClipboardList className="w-4 h-4 text-orange-400" />
                             Rapor Girişi
                         </Link>
@@ -370,23 +371,23 @@ export function AdminLayoutClient({ children, role, imageUrl }: AdminLayoutClien
 
                     {role === "SUPER_ADMIN" && (
                         <>
-                            <Link href="/admin/atamalar" onClick={() => setIsMoreOpen(false)} prefetch={false} className={drawerLink(isActive("/admin/atamalar"))}>
+                            <Link href={ROUTES.ADMIN_ATAMALAR} onClick={() => setIsMoreOpen(false)} prefetch={false} className={drawerLink(isActive(ROUTES.ADMIN_ATAMALAR))}>
                                 <TableProperties className="w-4 h-4 text-orange-400" />
                                 Atamalar
                             </Link>
-                            <Link href="/admin/user-matches" onClick={() => setIsMoreOpen(false)} prefetch={false} className={drawerLink(isActive("/admin/user-matches"))}>
+                            <Link href={ROUTES.ADMIN_USER_MATCHES} onClick={() => setIsMoreOpen(false)} prefetch={false} className={drawerLink(isActive(ROUTES.ADMIN_USER_MATCHES))}>
                                 <Trophy className="w-4 h-4 text-orange-400" />
                                 Maçlar
                             </Link>
-                            <Link href="/admin/payments" onClick={() => setIsMoreOpen(false)} prefetch={false} className={drawerLink(isActive("/admin/payments"))}>
+                            <Link href={ROUTES.ADMIN_PAYMENTS} onClick={() => setIsMoreOpen(false)} prefetch={false} className={drawerLink(isActive(ROUTES.ADMIN_PAYMENTS))}>
                                 <Banknote className="w-4 h-4 text-emerald-400" />
                                 Ödemeler
                             </Link>
-                            <Link href="/admin/logs" onClick={() => setIsMoreOpen(false)} prefetch={false} className={drawerLink(isActive("/admin/logs"))}>
+                            <Link href={ROUTES.ADMIN_LOGS} onClick={() => setIsMoreOpen(false)} prefetch={false} className={drawerLink(isActive(ROUTES.ADMIN_LOGS))}>
                                 <LucideHistory className="w-4 h-4" />
                                 İşlem Günlükleri
                             </Link>
-                            <Link href="/admin/settings" onClick={() => setIsMoreOpen(false)} prefetch={false} className={drawerLink(isActive("/admin/settings"))}>
+                            <Link href={ROUTES.ADMIN_SETTINGS} onClick={() => setIsMoreOpen(false)} prefetch={false} className={drawerLink(isActive(ROUTES.ADMIN_SETTINGS))}>
                                 <Settings className="w-4 h-4" />
                                 Ayarlar
                             </Link>

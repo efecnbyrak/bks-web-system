@@ -1,5 +1,40 @@
+import { z } from 'zod';
 import { db } from './db';
 import { MatchData } from './match-parser';
+
+const MatchDataSchema = z.object({
+    mac_adi: z.string(),
+    tarih: z.string(),
+    saat: z.string().optional(),
+    salon: z.string().optional(),
+    kategori: z.string(),
+    hafta: z.number().optional(),
+    sezon: z.string().optional(),
+    ligTuru: z.string(),
+    hakemler: z.array(z.string()),
+    masa_gorevlileri: z.array(z.string()),
+    saglikcilar: z.array(z.string()),
+    istatistikciler: z.array(z.string()),
+    gozlemciler: z.array(z.string()),
+    sahaKomiserleri: z.array(z.string()),
+    kaynak_dosya: z.string(),
+}).passthrough();
+
+const UserStorageSchema = z.object({
+    matches: z.array(MatchDataSchema),
+    hasNew: z.boolean(),
+    lastSync: z.string(),
+    scannedSeasons: z.array(z.string()).optional(),
+});
+
+const GlobalStorageSchema = z.object({
+    allMatches: z.array(MatchDataSchema),
+    lastSync: z.string(),
+    isSyncing: z.boolean(),
+    filesScanned: z.array(z.string()).optional(),
+    uniqueNamesCount: z.number().optional(),
+    nameSample: z.array(z.string()).optional(),
+});
 
 interface UserStorage {
     matches: MatchData[];
@@ -32,7 +67,12 @@ export async function getUserMatchesStore(userId: number): Promise<UserStorage |
         }
 
         // Prisma handles JSON parsing automatically for PostgreSQL Json fields
-        return user.matchStore as unknown as UserStorage;
+        const parsed = UserStorageSchema.safeParse(user.matchStore);
+        if (!parsed.success) {
+            console.warn(`[STORAGE] Invalid UserStorage shape for user ${userId}:`, parsed.error.issues);
+            return null;
+        }
+        return parsed.data as UserStorage;
     } catch (e) {
         console.error(`[STORAGE] DB Error reading matches for user ${userId}:`, e);
         return null;
@@ -105,7 +145,13 @@ export async function getGlobalMatchesStore(): Promise<GlobalStorage | null> {
             where: { key: 'GLOBAL_MATCH_REGISTRY' }
         });
         if (!setting?.value) return null;
-        return JSON.parse(setting.value);
+        const raw = JSON.parse(setting.value);
+        const parsed = GlobalStorageSchema.safeParse(raw);
+        if (!parsed.success) {
+            console.warn("[STORAGE] Invalid GlobalStorage shape:", parsed.error.issues);
+            return null;
+        }
+        return parsed.data as GlobalStorage;
     } catch (e) {
         return null;
     }

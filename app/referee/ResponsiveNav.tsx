@@ -6,6 +6,7 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { User, Calendar, MoreHorizontal, X, Sparkles, LayoutDashboard, Users, Briefcase, CheckCircle, Megaphone, ClipboardList, Trophy, Bell } from "lucide-react";
 import { SignOutButton } from "@/components/auth/SignOutButton";
+import { ROUTES } from "@/lib/routes";
 
 interface ResponsiveNavProps {
     refereeName: string;
@@ -26,11 +27,11 @@ export function ResponsiveNav({ refereeName, roleType, basePath = "/referee", ti
     useEffect(() => {
         const checkNotifications = async () => {
             try {
-                const res = await fetch("/api/matches/notification");
+                const res = await fetch(ROUTES.API_MATCHES_NOTIFICATION);
                 const data = await res.json();
                 setHasNewMatches(data.hasNew);
 
-                const annRes = await fetch("/api/announcements/unread");
+                const annRes = await fetch(ROUTES.API_ANNOUNCEMENTS_UNREAD);
                 const annData = await annRes.json();
                 setUnreadAnnouncements(annData.count || 0);
             } catch (e) {
@@ -123,9 +124,9 @@ export function ResponsiveNav({ refereeName, roleType, basePath = "/referee", ti
                                 </div>
 
                                 <Link
-                                    href="/admin"
+                                    href={ROUTES.ADMIN}
                                     prefetch={false}
-                                    className={`flex items-center gap-3 px-4 py-2.5 rounded-xl font-medium transition-all text-[16px] ${isActive("/admin") && pathname === "/admin"
+                                    className={`flex items-center gap-3 px-4 py-2.5 rounded-xl font-medium transition-all text-[16px] ${isActive(ROUTES.ADMIN) && pathname === ROUTES.ADMIN
                                         ? "bg-red-700 text-white shadow-md border-l-4 border-red-900 scale-[1.02]"
                                         : "hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 hover:translate-x-1"
                                         }`}
@@ -135,9 +136,9 @@ export function ResponsiveNav({ refereeName, roleType, basePath = "/referee", ti
                                 </Link>
 
                                 <Link
-                                    href="/admin/approvals"
+                                    href={ROUTES.ADMIN_APPROVALS}
                                     prefetch={false}
-                                    className={`flex items-center gap-3 px-4 py-2.5 rounded-xl font-medium transition-all text-[16px] ${isActive("/admin/approvals")
+                                    className={`flex items-center gap-3 px-4 py-2.5 rounded-xl font-medium transition-all text-[16px] ${isActive(ROUTES.ADMIN_APPROVALS)
                                         ? "bg-red-700 text-white shadow-md border-l-4 border-red-900 scale-[1.02]"
                                         : "hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 hover:translate-x-1"
                                         }`}
@@ -147,9 +148,9 @@ export function ResponsiveNav({ refereeName, roleType, basePath = "/referee", ti
                                 </Link>
 
                                 <Link
-                                    href="/admin/announcements"
+                                    href={ROUTES.ADMIN_ANNOUNCEMENTS}
                                     prefetch={false}
-                                    className={`flex items-center gap-3 px-4 py-2.5 rounded-xl font-medium transition-all text-[16px] ${isActive("/admin/announcements")
+                                    className={`flex items-center gap-3 px-4 py-2.5 rounded-xl font-medium transition-all text-[16px] ${isActive(ROUTES.ADMIN_ANNOUNCEMENTS)
                                         ? "bg-red-700 text-white shadow-md border-l-4 border-red-900 scale-[1.02]"
                                         : "hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 hover:translate-x-1"
                                         }`}
@@ -159,9 +160,9 @@ export function ResponsiveNav({ refereeName, roleType, basePath = "/referee", ti
                                 </Link>
 
                                 <Link
-                                    href="/admin/bag"
+                                    href={ROUTES.ADMIN_BAG}
                                     prefetch={false}
-                                    className={`flex items-center gap-3 px-4 py-2.5 rounded-xl font-medium transition-all text-[16px] ${isActive("/admin/bag")
+                                    className={`flex items-center gap-3 px-4 py-2.5 rounded-xl font-medium transition-all text-[16px] ${isActive(ROUTES.ADMIN_BAG)
                                         ? "bg-red-700 text-white shadow-md border-l-4 border-red-900 scale-[1.02]"
                                         : "hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 hover:translate-x-1"
                                         }`}
@@ -171,9 +172,9 @@ export function ResponsiveNav({ refereeName, roleType, basePath = "/referee", ti
                                 </Link>
 
                                 <Link
-                                    href="/admin/all-availabilities"
+                                    href={ROUTES.ADMIN_ALL_AVAILABILITIES}
                                     prefetch={false}
-                                    className={`flex items-center gap-3 px-4 py-2.5 rounded-xl font-medium transition-all text-[16px] ${isActive("/admin/all-availabilities")
+                                    className={`flex items-center gap-3 px-4 py-2.5 rounded-xl font-medium transition-all text-[16px] ${isActive(ROUTES.ADMIN_ALL_AVAILABILITIES)
                                         ? "bg-red-700 text-white shadow-md border-l-4 border-red-900 scale-[1.02]"
                                         : "hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 hover:translate-x-1"
                                         }`}
@@ -187,9 +188,9 @@ export function ResponsiveNav({ refereeName, roleType, basePath = "/referee", ti
                                 </div>
 
                                 <Link
-                                    href="/admin/referees"
+                                    href={ROUTES.ADMIN_REFEREES}
                                     prefetch={false}
-                                    className={`flex items-center gap-3 px-4 py-2.5 rounded-xl font-medium transition-all text-[16px] ${isActive("/admin/referees")
+                                    className={`flex items-center gap-3 px-4 py-2.5 rounded-xl font-medium transition-all text-[16px] ${isActive(ROUTES.ADMIN_REFEREES)
                                         ? "bg-red-700 text-white shadow-md border-l-4 border-red-900 scale-[1.02]"
                                         : "hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 hover:translate-x-1"
                                         }`}
@@ -199,9 +200,9 @@ export function ResponsiveNav({ refereeName, roleType, basePath = "/referee", ti
                                 </Link>
 
                                 <Link
-                                    href="/admin/officials"
+                                    href={ROUTES.ADMIN_OFFICIALS}
                                     prefetch={false}
-                                    className={`flex items-center gap-3 px-4 py-2.5 rounded-xl font-medium transition-all text-[16px] ${isActive("/admin/officials")
+                                    className={`flex items-center gap-3 px-4 py-2.5 rounded-xl font-medium transition-all text-[16px] ${isActive(ROUTES.ADMIN_OFFICIALS)
                                         ? "bg-red-700 text-white shadow-md border-l-4 border-red-900 scale-[1.02]"
                                         : "hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 hover:translate-x-1"
                                         }`}
@@ -211,9 +212,9 @@ export function ResponsiveNav({ refereeName, roleType, basePath = "/referee", ti
                                 </Link>
 
                                 <Link
-                                    href="/admin/observer-reports"
+                                    href={ROUTES.ADMIN_OBSERVER_REPORTS}
                                     prefetch={false}
-                                    className={`flex items-center gap-3 px-4 py-2.5 rounded-xl font-medium transition-all text-[16px] ${isActive("/admin/observer-reports")
+                                    className={`flex items-center gap-3 px-4 py-2.5 rounded-xl font-medium transition-all text-[16px] ${isActive(ROUTES.ADMIN_OBSERVER_REPORTS)
                                         ? "bg-red-700 text-white shadow-md border-l-4 border-red-900 scale-[1.02]"
                                         : "hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 hover:translate-x-1"
                                         }`}
@@ -226,7 +227,7 @@ export function ResponsiveNav({ refereeName, roleType, basePath = "/referee", ti
                                     <span className="text-[11px] font-black text-zinc-500 uppercase tracking-[0.2em] italic leading-none">Kişisel Erişim</span>
                                 </div>
                                 <Link
-                                    href={roleType === "REFEREE" ? "/referee" : "/general"}
+                                    href={roleType === "REFEREE" ? ROUTES.REFEREE : ROUTES.GENERAL}
                                     prefetch={false}
                                     className="flex items-center gap-3 px-4 py-2.5 rounded-xl font-medium transition-all text-[16px] bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-white scale-[1.02]"
                                 >
@@ -414,28 +415,28 @@ export function ResponsiveNav({ refereeName, roleType, basePath = "/referee", ti
                         </>
                     ) : (
                         <>
-                            <Link href="/admin" prefetch={false} className={bottomItem(isActive("/admin") && pathname === "/admin")}>
+                            <Link href={ROUTES.ADMIN} prefetch={false} className={bottomItem(isActive(ROUTES.ADMIN) && pathname === ROUTES.ADMIN)}>
                                 <LayoutDashboard className="w-5 h-5" />
                                 <span className="text-[10px] font-medium">Dashboard</span>
-                                {isActive("/admin") && pathname === "/admin" && <span className="absolute bottom-1.5 w-1 h-1 rounded-full bg-red-600" />}
+                                {isActive(ROUTES.ADMIN) && pathname === ROUTES.ADMIN && <span className="absolute bottom-1.5 w-1 h-1 rounded-full bg-red-600" />}
                             </Link>
 
-                            <Link href="/admin/approvals" prefetch={false} className={bottomItem(isActive("/admin/approvals"))}>
+                            <Link href={ROUTES.ADMIN_APPROVALS} prefetch={false} className={bottomItem(isActive(ROUTES.ADMIN_APPROVALS))}>
                                 <CheckCircle className="w-5 h-5" />
                                 <span className="text-[10px] font-medium">Onaylar</span>
-                                {isActive("/admin/approvals") && <span className="absolute bottom-1.5 w-1 h-1 rounded-full bg-red-600" />}
+                                {isActive(ROUTES.ADMIN_APPROVALS) && <span className="absolute bottom-1.5 w-1 h-1 rounded-full bg-red-600" />}
                             </Link>
 
-                            <Link href="/admin/announcements" prefetch={false} className={bottomItem(isActive("/admin/announcements"))}>
+                            <Link href={ROUTES.ADMIN_ANNOUNCEMENTS} prefetch={false} className={bottomItem(isActive(ROUTES.ADMIN_ANNOUNCEMENTS))}>
                                 <Megaphone className="w-5 h-5" />
                                 <span className="text-[10px] font-medium">Duyurular</span>
-                                {isActive("/admin/announcements") && <span className="absolute bottom-1.5 w-1 h-1 rounded-full bg-red-600" />}
+                                {isActive(ROUTES.ADMIN_ANNOUNCEMENTS) && <span className="absolute bottom-1.5 w-1 h-1 rounded-full bg-red-600" />}
                             </Link>
 
-                            <Link href="/admin/referees" prefetch={false} className={bottomItem(isActive("/admin/referees"))}>
+                            <Link href={ROUTES.ADMIN_REFEREES} prefetch={false} className={bottomItem(isActive(ROUTES.ADMIN_REFEREES))}>
                                 <Users className="w-5 h-5" />
                                 <span className="text-[10px] font-medium">Hakemler</span>
-                                {isActive("/admin/referees") && <span className="absolute bottom-1.5 w-1 h-1 rounded-full bg-red-600" />}
+                                {isActive(ROUTES.ADMIN_REFEREES) && <span className="absolute bottom-1.5 w-1 h-1 rounded-full bg-red-600" />}
                             </Link>
 
                             <button onClick={() => setIsMoreOpen(true)} className={bottomItem(false)}>
@@ -494,7 +495,7 @@ export function ResponsiveNav({ refereeName, roleType, basePath = "/referee", ti
                             )}
 
                             {isAdminObserver && (
-                                <Link href="/admin" onClick={() => setIsMoreOpen(false)} prefetch={false} className="flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all text-[15px] bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40">
+                                <Link href={ROUTES.ADMIN} onClick={() => setIsMoreOpen(false)} prefetch={false} className="flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all text-[15px] bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40">
                                     <LayoutDashboard className="w-4 h-4" />
                                     Yönetim Merkezine Geç
                                 </Link>
@@ -506,27 +507,27 @@ export function ResponsiveNav({ refereeName, roleType, basePath = "/referee", ti
                         </>
                     ) : (
                         <>
-                            <Link href="/admin/bag" onClick={() => setIsMoreOpen(false)} prefetch={false} className={drawerLink(isActive("/admin/bag"))}>
+                            <Link href={ROUTES.ADMIN_BAG} onClick={() => setIsMoreOpen(false)} prefetch={false} className={drawerLink(isActive(ROUTES.ADMIN_BAG))}>
                                 <Briefcase className="w-4 h-4 text-red-500" />
                                 Hakem Çantası
                             </Link>
 
-                            <Link href="/admin/all-availabilities" onClick={() => setIsMoreOpen(false)} prefetch={false} className={drawerLink(isActive("/admin/all-availabilities"))}>
+                            <Link href={ROUTES.ADMIN_ALL_AVAILABILITIES} onClick={() => setIsMoreOpen(false)} prefetch={false} className={drawerLink(isActive(ROUTES.ADMIN_ALL_AVAILABILITIES))}>
                                 <Calendar className="w-4 h-4 text-blue-500" />
                                 Tüm Uygunluklar
                             </Link>
 
-                            <Link href="/admin/officials" onClick={() => setIsMoreOpen(false)} prefetch={false} className={drawerLink(isActive("/admin/officials"))}>
+                            <Link href={ROUTES.ADMIN_OFFICIALS} onClick={() => setIsMoreOpen(false)} prefetch={false} className={drawerLink(isActive(ROUTES.ADMIN_OFFICIALS))}>
                                 <Users className="w-4 h-4 text-orange-500" />
                                 Görevliler
                             </Link>
 
-                            <Link href="/admin/observer-reports" onClick={() => setIsMoreOpen(false)} prefetch={false} className={drawerLink(isActive("/admin/observer-reports"))}>
+                            <Link href={ROUTES.ADMIN_OBSERVER_REPORTS} onClick={() => setIsMoreOpen(false)} prefetch={false} className={drawerLink(isActive(ROUTES.ADMIN_OBSERVER_REPORTS))}>
                                 <ClipboardList className="w-4 h-4 text-orange-400" />
                                 Gözlemci Raporları
                             </Link>
 
-                            <Link href={roleType === "REFEREE" ? "/referee" : "/general"} onClick={() => setIsMoreOpen(false)} prefetch={false} className="flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all text-[15px] bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-white">
+                            <Link href={roleType === "REFEREE" ? ROUTES.REFEREE : ROUTES.GENERAL} onClick={() => setIsMoreOpen(false)} prefetch={false} className="flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all text-[15px] bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-white">
                                 <User className="w-4 h-4" />
                                 Profilim Kısmına Geç
                             </Link>

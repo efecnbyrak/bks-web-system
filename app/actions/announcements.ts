@@ -1,9 +1,19 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
+import sanitizeHtml from "sanitize-html";
 import { db } from "@/lib/db";
 import { sendEmailSafe } from "@/lib/email";
 import { getSession } from "@/lib/session";
 import { logAction } from "@/lib/logger";
+import type { ActionResult, ActionVoidResult } from "@/lib/types/actions";
+import { ROUTES } from "@/lib/routes";
+
+const DB_SANITIZE_OPTIONS: sanitizeHtml.IOptions = {
+    allowedTags: ["b", "i", "em", "strong", "u", "p", "br", "ul", "ol", "li", "a"],
+    allowedAttributes: { "a": ["href", "target"] },
+    allowedSchemes: ["https", "http", "mailto"],
+};
 
 export async function ensureAnnouncementTable() {
     try {
@@ -49,7 +59,7 @@ export async function getRefereesAndOfficials() {
     }
 }
 
-export async function sendAnnouncement(subject: string, content: string, target: string = "ALL", specificUserIds?: number[]) {
+export async function sendAnnouncement(subject: string, content: string, target: string = "ALL", specificUserIds?: number[]): Promise<ActionResult<{ count: number }>> {
     const session = await getSession();
     if (!session?.role || !["ADMIN", "SUPER_ADMIN", "ADMIN_IHK"].includes(session.role)) {
         throw new Error("Unauthorized");
@@ -152,11 +162,14 @@ export async function sendAnnouncement(subject: string, content: string, target:
         const results = await Promise.all(emailPromises);
         const successCount = results.filter(Boolean).length;
 
-        // 3. Save announcement record
+        // 3. Save announcement record (sanitized before DB write)
+        const sanitizedSubject = sanitizeHtml(subject, { allowedTags: [], allowedAttributes: {} });
+        const sanitizedContent = sanitizeHtml(content, DB_SANITIZE_OPTIONS);
+
         await db.announcement.create({
             data: {
-                subject,
-                content,
+                subject: sanitizedSubject,
+                content: sanitizedContent,
                 target: savedTarget,
                 senderId: session.userId,
                 sentCount: successCount
@@ -197,7 +210,11 @@ export async function sendAnnouncement(subject: string, content: string, target:
 
         await logAction(session.userId, "ANNOUNCEMENT_SENT", `Sent to ${successCount} users: ${subject}`);
 
-        return { success: true, message: `${successCount} adet e-posta başarıyla gönderildi.`, count: successCount };
+        revalidatePath(ROUTES.REFEREE_ANNOUNCEMENTS);
+        revalidatePath(ROUTES.GENERAL_ANNOUNCEMENTS);
+        revalidatePath(ROUTES.ADMIN_ANNOUNCEMENTS);
+
+        return { success: true, message: `${successCount} adet e-posta başarıyla gönderildi.`, data: { count: successCount } };
     } catch (error) {
         console.error("[ANNOUNCEMENT ERROR]", error);
         return { success: false, message: (error as any).message || "Bilinmeyen bir hata oluştu." };
@@ -264,7 +281,7 @@ export async function getAnnouncements() {
     }
 }
 
-export async function markAnnouncementAsRead(announcementId: number) {
+export async function markAnnouncementAsRead(announcementId: number): Promise<ActionVoidResult> {
     const session = await getSession();
     if (!session || !session.userId) {
         return { success: false };
@@ -284,6 +301,11 @@ export async function markAnnouncementAsRead(announcementId: number) {
             },
             update: {}
         });
+
+        revalidatePath(ROUTES.REFEREE_ANNOUNCEMENTS);
+        revalidatePath(ROUTES.GENERAL_ANNOUNCEMENTS);
+        revalidatePath(ROUTES.ADMIN_ANNOUNCEMENTS);
+
         return { success: true };
     } catch (error) {
         console.error("[MARK_READ_ERROR]", error);
@@ -291,7 +313,7 @@ export async function markAnnouncementAsRead(announcementId: number) {
     }
 }
 
-export async function deleteAnnouncement(announcementId: number) {
+export async function deleteAnnouncement(announcementId: number): Promise<ActionVoidResult> {
     const session = await getSession();
     if (!session || !["ADMIN", "SUPER_ADMIN", "ADMIN_IHK"].includes(session.role)) {
         return { success: false, message: "Yetkisiz işlem." };
@@ -306,6 +328,11 @@ export async function deleteAnnouncement(announcementId: number) {
         });
 
         await logAction(session.userId, "ANNOUNCEMENT_DELETED", `Deleted announcement ID: ${announcementId}`);
+
+        revalidatePath(ROUTES.REFEREE_ANNOUNCEMENTS);
+        revalidatePath(ROUTES.GENERAL_ANNOUNCEMENTS);
+        revalidatePath(ROUTES.ADMIN_ANNOUNCEMENTS);
+
         return { success: true, message: "Duyuru başarıyla silindi." };
     } catch (error) {
         console.error("[DELETE_ANNOUNCEMENT_ERROR]", error);
