@@ -24,23 +24,51 @@
 .DS_Store
 *.pem
 
-# debug
+# debug / logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+*.log
+ts_error.txt
 
-# env files (can opt-in for committing if needed)
+# env files
 .env*
+.env*.local
 
 # vercel
 .vercel
 
-# typescript
+# typescript build artifacts
 *.tsbuildinfo
 next-env.d.ts
 
+# prisma generated client
 /app/generated/prisma
 
-.vercel
-.env*.local
+# prisma dev database (never commit local DB)
+prisma/dev.db
+prisma/dev.db-journal
+prisma/dev.db-shm
+prisma/dev.db-wal
+
+# prisma seed scripts (internal tooling)
+prisma/seed.ts
+prisma/seed-admin.js
+
+# internal scripts (not part of app, not needed on Vercel)
+/scripts/
+
+# temporary one-off scripts
+/tmp/
+
+# root-level scratch/utility files
+update-phone.mjs
+update-phone.ts
+proxy.ts
+
+# data folder — keep gameRules/ and static data, exclude archive
+/data/archive/
+
+# claude code local settings (machine-specific)
+.claude/settings.local.json
