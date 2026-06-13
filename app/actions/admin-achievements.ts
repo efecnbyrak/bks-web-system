@@ -3,8 +3,6 @@
 import { db } from "@/lib/db";
 import { RANK_LEVELS, UserAchievementData } from "./achievement-types";
 
-export type { UserAchievementData };
-
 function computeXPAndRank(data: {
     completedAssignments: number;
     totalAssignments: number;
