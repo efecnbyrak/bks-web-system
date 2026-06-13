@@ -3,11 +3,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { getUserSecurityQuestion, resetPasswordWithSecurityQuestion, resetPasswordWithRecoveryCode } from "@/app/actions/auth";
-import { Shield, Key, ArrowLeft, Loader2, CheckCircle2, AlertCircle, Fingerprint, Eye, EyeOff } from "lucide-react";
+import { Shield, Key, ArrowLeft, Loader2, CheckCircle2, AlertCircle, Fingerprint, Eye, EyeOff, Mail, Clock, Info } from "lucide-react";
 import Link from "next/link";
 
-type Method = "NONE" | "RECOVERY_CODE" | "SECURITY_QUESTION";
-type Step = "CHOOSE" | "IDENTIFY_SQ" | "SECURITY_QUESTION" | "RECOVERY_CODE_FORM" | "SUCCESS";
+type Method = "NONE" | "RECOVERY_CODE" | "SECURITY_QUESTION" | "CONTACT";
+type Step = "CHOOSE" | "IDENTIFY_SQ" | "SECURITY_QUESTION" | "RECOVERY_CODE_FORM" | "SUCCESS" | "CONTACT_FORM" | "CONTACT_SUCCESS";
 
 export default function ForgotPasswordPage() {
     const router = useRouter();
@@ -26,6 +26,7 @@ export default function ForgotPasswordPage() {
     const [answer, setAnswer] = useState("");
     const [showPassword, setShowPassword] = useState(false);
     const [showPasswordConfirm, setShowPasswordConfirm] = useState(false);
+    const [contactEmail, setContactEmail] = useState("");
 
     const handleIdentifySQ = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -63,6 +64,30 @@ export default function ForgotPasswordPage() {
         } else {
             setError(res.error || "Şifre güncellenemedi.");
         }
+        setIsLoading(false);
+    };
+
+    const handleContactSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setError(null);
+        setIsLoading(true);
+
+        try {
+            const res = await fetch("/api/tickets/guest", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email: contactEmail }),
+            });
+            const data = await res.json();
+            if (res.ok && data.success) {
+                setStep("CONTACT_SUCCESS");
+            } else {
+                setError(data.error || "Bir hata oluştu. Lütfen tekrar deneyin.");
+            }
+        } catch {
+            setError("Bağlantı hatası. Lütfen internet bağlantınızı kontrol edin.");
+        }
+
         setIsLoading(false);
     };
 
@@ -124,6 +149,18 @@ export default function ForgotPasswordPage() {
                                 <div className="text-center">
                                     <h3 className="text-zinc-400 group-hover:text-white font-bold text-lg transition-colors">Güvenlik Sorusu İle Sıfırla</h3>
                                     <p className="text-zinc-600 text-xs mt-1">Klasik Kurtarma</p>
+                                </div>
+                            </button>
+
+                            <button
+                                onClick={() => setStep("CONTACT_FORM")}
+                                className="w-full relative overflow-hidden bg-zinc-950 border border-indigo-900/40 hover:border-indigo-500/60 rounded-2xl p-6 transition-all group flex flex-col items-center gap-3"
+                            >
+                                <div className="absolute inset-0 bg-gradient-to-br from-indigo-900/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                                <Mail className="w-8 h-8 text-indigo-400 group-hover:text-indigo-300 transition-colors" />
+                                <div className="text-center">
+                                    <h3 className="text-zinc-400 group-hover:text-white font-bold text-lg transition-colors">Bizimle İletişime Geçin</h3>
+                                    <p className="text-zinc-600 text-xs mt-1">E-posta ile destek talebi</p>
                                 </div>
                             </button>
                         </div>
@@ -341,6 +378,100 @@ export default function ForgotPasswordPage() {
                                 İptal Et
                             </button>
                         </form>
+                    )}
+
+                    {step === "CONTACT_FORM" && (
+                        <form onSubmit={handleContactSubmit} className="space-y-6">
+                            <div className="text-center mb-6 border-b border-zinc-800 pb-4">
+                                <h2 className="text-white font-bold text-lg">Bizimle İletişime Geçin</h2>
+                                <p className="text-zinc-500 text-xs mt-1">E-posta adresinizi girin, ekibimiz en kısa sürede sizi bilgilendirecektir.</p>
+                            </div>
+
+                            {error && (
+                                <div className="p-4 bg-red-900/20 border border-red-900/30 text-red-500 text-xs rounded-xl flex items-center gap-3">
+                                    <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                                    {error}
+                                </div>
+                            )}
+
+                            <div>
+                                <label className="block text-xs font-bold text-zinc-400 uppercase tracking-widest mb-2 ml-1">E-posta Adresiniz</label>
+                                <div className="relative">
+                                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+                                    <input
+                                        type="email"
+                                        required
+                                        value={contactEmail}
+                                        onChange={(e) => setContactEmail(e.target.value)}
+                                        className="w-full bg-zinc-950 border border-zinc-800 text-white rounded-xl pl-10 pr-4 py-3 focus:ring-2 focus:ring-indigo-600 outline-none transition-all"
+                                        placeholder="ornek@eposta.com"
+                                        autoFocus
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="p-4 bg-indigo-950/30 border border-indigo-900/30 rounded-xl flex items-start gap-3">
+                                <Clock className="w-4 h-4 text-indigo-400 flex-shrink-0 mt-0.5" />
+                                <p className="text-indigo-300 text-xs leading-relaxed">
+                                    Talebiniz alındıktan sonra <span className="font-bold">0-30 dakika</span> içerisinde şifrenizi yenilemek için tekrardan giriş yapabilirsiniz.
+                                </p>
+                            </div>
+
+                            <button
+                                type="submit"
+                                disabled={isLoading}
+                                className="w-full bg-indigo-700 hover:bg-indigo-800 text-white font-bold py-4 rounded-xl transition-all flex items-center justify-center gap-2"
+                            >
+                                {isLoading ? <Loader2 className="animate-spin" /> : "Gönder"}
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() => { setStep("CHOOSE"); setError(null); }}
+                                className="w-full text-zinc-600 hover:text-zinc-400 text-xs font-bold transition-colors uppercase tracking-widest"
+                            >
+                                Geri Dön
+                            </button>
+                        </form>
+                    )}
+
+                    {step === "CONTACT_SUCCESS" && (
+                        <div className="space-y-6">
+                            <div className="text-center">
+                                <div className="w-16 h-16 bg-indigo-900/20 border border-indigo-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <CheckCircle2 className="w-8 h-8 text-indigo-400" />
+                                </div>
+                                <h3 className="text-white font-bold text-xl">Talebiniz Alındı!</h3>
+                                <p className="text-zinc-400 text-sm mt-2">
+                                    <span className="text-indigo-400 font-bold">0-30 dakika</span> içerisinde şifrenizi yenilemek için tekrardan giriş yapabilirsiniz.
+                                </p>
+                            </div>
+
+                            <div className="bg-zinc-950 border border-zinc-800 rounded-2xl p-5 space-y-3">
+                                <div className="flex items-center gap-2 mb-1">
+                                    <Info className="w-4 h-4 text-indigo-400 flex-shrink-0" />
+                                    <p className="text-xs font-black text-zinc-300 uppercase tracking-widest">Şifre Yenileme Adımları</p>
+                                </div>
+                                <ol className="space-y-2.5">
+                                    <li className="flex items-start gap-3">
+                                        <span className="w-5 h-5 rounded-full bg-indigo-900/50 border border-indigo-700 flex items-center justify-center text-[10px] font-black text-indigo-300 flex-shrink-0 mt-0.5">1</span>
+                                        <p className="text-zinc-400 text-xs leading-relaxed">Login kısmında <span className="text-white font-bold">e-posta adresinizi</span> girin.</p>
+                                    </li>
+                                    <li className="flex items-start gap-3">
+                                        <span className="w-5 h-5 rounded-full bg-indigo-900/50 border border-indigo-700 flex items-center justify-center text-[10px] font-black text-indigo-300 flex-shrink-0 mt-0.5">2</span>
+                                        <p className="text-zinc-400 text-xs leading-relaxed">Şifre alanını <span className="text-white font-bold">boş bırakarak</span> giriş yapmayı deneyin.</p>
+                                    </li>
+                                    <li className="flex items-start gap-3">
+                                        <span className="w-5 h-5 rounded-full bg-indigo-900/50 border border-indigo-700 flex items-center justify-center text-[10px] font-black text-indigo-300 flex-shrink-0 mt-0.5">3</span>
+                                        <p className="text-zinc-400 text-xs leading-relaxed">Açılan ekranda yeni şifrenizi <span className="text-white font-bold">iki defa girin</span>.</p>
+                                    </li>
+                                    <li className="flex items-start gap-3">
+                                        <span className="w-5 h-5 rounded-full bg-emerald-900/50 border border-emerald-700 flex items-center justify-center text-[10px] font-black text-emerald-300 flex-shrink-0 mt-0.5">✓</span>
+                                        <p className="text-zinc-400 text-xs leading-relaxed">Şifreniz başarıyla yenilenmiş olacaktır.</p>
+                                    </li>
+                                </ol>
+                            </div>
+                        </div>
                     )}
 
                     {step === "SUCCESS" && (

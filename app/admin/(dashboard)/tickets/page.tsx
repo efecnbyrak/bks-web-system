@@ -9,7 +9,8 @@ import {
 
 interface AdminTicket {
     id: number;
-    userId: number;
+    userId: number | null;
+    guestEmail: string | null;
     userName: string;
     userEmail: string;
     type: string;
@@ -42,6 +43,7 @@ const ERROR_TYPE_LABELS: Record<string, string> = {
     KURAL_KITABI: "Kural Kitabı",
     ATAMA: "Atama",
     HESAP: "Hesap / Profil",
+    SIFRE_YENILEME: "Şifre Yenileme",
     DIGER: "Diğer",
     GENEL: "Genel Öneri",
     UYGULAMA: "Uygulama İyileştirmesi",

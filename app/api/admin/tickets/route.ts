@@ -37,12 +37,14 @@ export async function GET(req: NextRequest) {
 
         const formatted = tickets.map((t) => ({
             ...t,
-            userName: t.user.referee
+            userName: t.user?.referee
                 ? `${t.user.referee.firstName} ${t.user.referee.lastName}`
-                : t.user.official
+                : t.user?.official
                 ? `${t.user.official.firstName} ${t.user.official.lastName}`
+                : t.guestEmail
+                ? "Misafir Kullanıcı"
                 : "Bilinmiyor",
-            userEmail: t.user.referee?.email ?? t.user.official?.email ?? "-",
+            userEmail: t.user?.referee?.email ?? t.user?.official?.email ?? t.guestEmail ?? "-",
         }));
 
         return NextResponse.json({ tickets: formatted });

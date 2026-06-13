@@ -638,10 +638,11 @@ model RuleProgress {
 
 model SupportTicket {
   id          Int      @id @default(autoincrement())
-  user        User     @relation(fields: [userId], references: [id])
-  userId      Int
+  user        User?    @relation(fields: [userId], references: [id])
+  userId      Int?
+  guestEmail  String?  // Giriş yapmamış kullanıcılar için (şifre yenileme talepleri)
   type        String   @default("DESTEK") // "DESTEK" | "ONERI"
-  errorType   String   // "TEKNIK_HATA", "SINAV_SORUNU", "KURAL_KITABI", "ATAMA", "HESAP", "DIGER", "GENEL", "UYGULAMA", "KURAL", "EGITIM"
+  errorType   String   // "TEKNIK_HATA", "SINAV_SORUNU", "KURAL_KITABI", "ATAMA", "HESAP", "DIGER", "GENEL", "UYGULAMA", "KURAL", "EGITIM", "SIFRE_YENILEME"
   subject     String
   description String   @db.Text
   imageUrls   String?  @db.Text // JSON array: ["data:image/...","..."]

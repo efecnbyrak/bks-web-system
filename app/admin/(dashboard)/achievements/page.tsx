@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import { getAllUsersAchievements, UserAchievementData } from "@/app/actions/admin-achievements";
+import { getAllUsersAchievements } from "@/app/actions/admin-achievements";
+import { UserAchievementData } from "@/app/actions/achievement-types";
 import {
     Loader2,
     Trophy,

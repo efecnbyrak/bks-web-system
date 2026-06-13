@@ -16,6 +16,7 @@ const SUPPORT_ERROR_TYPES = [
     { value: "KURAL_KITABI", label: "Kural Kitabı" },
     { value: "ATAMA", label: "Atama Sorunu" },
     { value: "HESAP", label: "Hesap Sorunu" },
+    { value: "SIFRE_YENILEME", label: "Şifre Yenileme" },
     { value: "DIGER", label: "Diğer" },
 ];
 
