@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, User, Calendar, PlayCircle, ClipboardList, Sparkles, Trophy, BookOpen, Users, CheckCircle, Megaphone, Briefcase } from "lucide-react";
+import { ArrowRight, User, Calendar, PlayCircle, ClipboardList, Sparkles, Trophy, BookOpen, Users, CheckCircle, Megaphone, Briefcase, BookMarked, AlertCircle } from "lucide-react";
 import { verifySession } from "@/lib/session";
 import { db } from "@/lib/db";
 
@@ -123,11 +123,44 @@ export default async function RefereeOverview() {
         });
     }
 
-    const [user, adminAnnouncement, recentAnnouncementsResult] = await Promise.all([
+    // Ödev widget için referee/official id lazım
+    const profilePromise = !isObserverAndAdmin
+        ? db.user.findUnique({
+            where: { id: session.userId },
+            select: { referee: { select: { id: true } }, official: { select: { id: true } } }
+        }).catch(() => null)
+        : Promise.resolve(null);
+
+    const [user, adminAnnouncement, recentAnnouncementsResult, profileForWidget] = await Promise.all([
         userPromise,
         adminAnnp || Promise.resolve(null),
-        recentAnnp || Promise.resolve([])
+        recentAnnp || Promise.resolve([]),
+        profilePromise,
     ]);
+
+    // Tamamlanmamış ödev sayısı
+    let pendingAssignmentCount = 0;
+    if (!isObserverAndAdmin && profileForWidget) {
+        const refId = profileForWidget.referee?.id;
+        const offId = profileForWidget.official?.id;
+        const allActive = await db.examAssignment.findMany({
+            where: { isActive: true },
+            select: {
+                id: true,
+                dueDate: true,
+                attempts: {
+                    where: { OR: [{ refereeId: refId || -1 }, { officialId: offId || -1 }] },
+                    take: 1,
+                    select: { id: true },
+                }
+            }
+        }).catch(() => []);
+        pendingAssignmentCount = allActive.filter(a => {
+            const notDone = a.attempts.length === 0;
+            const notExpired = !a.dueDate || new Date(a.dueDate) > new Date();
+            return notDone && notExpired;
+        }).length;
+    }
 
     let recentAnnouncements = recentAnnouncementsResult;
     let personalAnnouncement = null;
@@ -277,6 +310,26 @@ export default async function RefereeOverview() {
                                 Gelen Kutusuna Git <ArrowRight className="w-4 h-4" />
                             </Link>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Ödev uyarı widget */}
+            {!isObserverAndAdmin && pendingAssignmentCount > 0 && (
+                <div className="animate-in slide-in-from-bottom-4 duration-500">
+                    <div className="flex items-center gap-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 rounded-2xl px-5 py-4">
+                        <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center shrink-0">
+                            <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <p className="text-sm font-black text-amber-800 dark:text-amber-300">
+                                {pendingAssignmentCount} tamamlanmamış ödeviniz var
+                            </p>
+                            <p className="text-xs text-amber-600 dark:text-amber-500 mt-0.5">Soru havuzuna giderek ödevlerinizi tamamlayabilirsiniz.</p>
+                        </div>
+                        <Link href="/referee/bag/questions" className="shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-black uppercase tracking-wider transition-colors">
+                            Ödeve Git <ArrowRight className="w-3.5 h-3.5" />
+                        </Link>
                     </div>
                 </div>
             )}

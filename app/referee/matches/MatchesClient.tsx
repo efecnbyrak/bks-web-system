@@ -1111,31 +1111,27 @@ export function MatchesClient({ firstName, lastName, initialMatches = [], initia
             {/* Filters */}
             {allMatches.length > 0 && (
                 <div className="space-y-2" ref={filterSectionRef}>
-                    <div className="overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-                        <div className="flex gap-2 min-w-max">
-                            <FilterTab active={filterMode === "all"} onClick={() => setFilterMode("all")} label={`🏀 Tümü (${allMatches.length})`} />
-                            <FilterTab active={filterMode === "played"} onClick={() => setFilterMode("played")} label={`✅ Oynanmış (${playedMatches.length})`} />
-                            <FilterTab active={filterMode === "upcoming"} onClick={() => setFilterMode("upcoming")} label={`📅 Gelecek (${upcomingMatches.length})`} />
-                            {okulMatches.length > 0 && <FilterTab active={filterMode === "okul"} onClick={() => setFilterMode("okul")} label={`🏫 Okul (${okulMatches.length})`} />}
-                            {ozelMatches.length > 0 && <FilterTab active={filterMode === "ozel"} onClick={() => setFilterMode("ozel")} label={`🏆 Özel Lig (${ozelMatches.length})`} />}
-                            {haftaGroups.sortedWeeks.length > 0 && (
-                                <FilterTab active={filterMode === "hafta"} onClick={() => { setFilterMode("hafta"); if (!selectedHafta) setSelectedHafta(haftaGroups.sortedWeeks[haftaGroups.sortedWeeks.length - 1]); }} label={`📋 Hafta (${haftaGroups.sortedWeeks.length})`} />
-                            )}
-                        </div>
+                    <div className="flex flex-wrap gap-2 justify-center">
+                        <FilterTab active={filterMode === "all"} onClick={() => setFilterMode("all")} label={`🏀 Tümü (${allMatches.length})`} />
+                        <FilterTab active={filterMode === "played"} onClick={() => setFilterMode("played")} label={`✅ Oynanmış (${playedMatches.length})`} />
+                        <FilterTab active={filterMode === "upcoming"} onClick={() => setFilterMode("upcoming")} label={`📅 Gelecek (${upcomingMatches.length})`} />
+                        {okulMatches.length > 0 && <FilterTab active={filterMode === "okul"} onClick={() => setFilterMode("okul")} label={`🏫 Okul (${okulMatches.length})`} />}
+                        {ozelMatches.length > 0 && <FilterTab active={filterMode === "ozel"} onClick={() => setFilterMode("ozel")} label={`🏆 Özel Lig (${ozelMatches.length})`} />}
+                        {haftaGroups.sortedWeeks.length > 0 && (
+                            <FilterTab active={filterMode === "hafta"} onClick={() => { setFilterMode("hafta"); if (!selectedHafta) setSelectedHafta(haftaGroups.sortedWeeks[haftaGroups.sortedWeeks.length - 1]); }} label={`📋 Hafta (${haftaGroups.sortedWeeks.length})`} />
+                        )}
                     </div>
 
                     {filterMode === "hafta" && (
-                        <div className="overflow-x-auto pb-1">
-                            <div className="flex gap-1.5 min-w-max">
-                                {haftaGroups.sortedWeeks.map(w => (
-                                    <button key={w} onClick={() => setSelectedHafta(w)}
-                                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${selectedHafta === w
-                                            ? "bg-gradient-to-r from-violet-600 to-violet-700 text-white shadow-md"
-                                            : "bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 text-zinc-500 hover:border-violet-300"}`}>
-                                        {w}. Hafta ({haftaGroups.map[w].length})
-                                    </button>
-                                ))}
-                            </div>
+                        <div className="flex flex-wrap gap-1.5 justify-center">
+                            {haftaGroups.sortedWeeks.map(w => (
+                                <button key={w} onClick={() => setSelectedHafta(w)}
+                                    className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${selectedHafta === w
+                                        ? "bg-gradient-to-r from-violet-600 to-violet-700 text-white shadow-md"
+                                        : "bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 text-zinc-500 hover:border-violet-300"}`}>
+                                    {w}. Hafta ({haftaGroups.map[w].length})
+                                </button>
+                            ))}
                         </div>
                     )}
                 </div>

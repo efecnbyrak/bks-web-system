@@ -332,7 +332,7 @@ function ExamHistorySection({ attempts }: { attempts: ExamAttempt[] }) {
                     </div>
                     <p className="text-sm font-bold text-zinc-600 dark:text-zinc-400 mb-1">Henüz sınava girmedin</p>
                     <p className="text-[11px] text-zinc-400 mb-4">Sınava girerek başarı rozetleri kazan ve kendini geliştir.</p>
-                    <Link href="/referee/exam" className="px-4 py-2 rounded-full bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-xs font-bold hover:opacity-90 transition-opacity shadow-sm">
+                    <Link href="/referee/bag/questions" className="px-4 py-2 rounded-full bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-xs font-bold hover:opacity-90 transition-opacity shadow-sm">
                         Sınava Gir
                     </Link>
                 </div>
