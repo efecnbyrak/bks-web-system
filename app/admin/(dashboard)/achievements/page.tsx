@@ -18,14 +18,17 @@ import {
 } from "lucide-react";
 
 const LEVEL_CONFIG: Record<string, { color: string; bg: string; icon: React.ReactNode }> = {
+    "Başlangıç": { color: "text-zinc-500", bg: "bg-zinc-100 dark:bg-zinc-800", icon: <Shield className="w-3.5 h-3.5" /> },
     Bronz: { color: "text-amber-700", bg: "bg-amber-100 dark:bg-amber-900/30", icon: <Shield className="w-3.5 h-3.5" /> },
     Gümüş: { color: "text-zinc-500", bg: "bg-zinc-100 dark:bg-zinc-800", icon: <Shield className="w-3.5 h-3.5" /> },
     Altın: { color: "text-amber-500", bg: "bg-amber-50 dark:bg-amber-900/20", icon: <Trophy className="w-3.5 h-3.5" /> },
     Platin: { color: "text-teal-500", bg: "bg-teal-50 dark:bg-teal-900/20", icon: <Crown className="w-3.5 h-3.5" /> },
     Elmas: { color: "text-sky-500", bg: "bg-sky-50 dark:bg-sky-900/20", icon: <Gem className="w-3.5 h-3.5" /> },
+    Master: { color: "text-violet-500", bg: "bg-violet-50 dark:bg-violet-900/20", icon: <Star className="w-3.5 h-3.5" /> },
+    Legend: { color: "text-rose-500", bg: "bg-rose-50 dark:bg-rose-900/20", icon: <Crown className="w-3.5 h-3.5" /> },
 };
 
-const LEVELS = ["Tümü", "Bronz", "Gümüş", "Altın", "Platin", "Elmas"];
+const LEVELS = ["Tümü", "Başlangıç", "Bronz", "Gümüş", "Altın", "Platin", "Elmas", "Master", "Legend"];
 const USER_TYPES = ["Tümü", "Hakem", "Görevli"];
 
 export default function AchievementsPage() {
@@ -53,7 +56,7 @@ export default function AchievementsPage() {
                 typeFilter === "Tümü" ||
                 (typeFilter === "Hakem" && u.type === "referee") ||
                 (typeFilter === "Görevli" && u.type === "official");
-            const matchLevel = levelFilter === "Tümü" || u.level === levelFilter;
+            const matchLevel = levelFilter === "Tümü" || u.rank === levelFilter;
             return matchSearch && matchType && matchLevel;
         });
     }, [data, search, typeFilter, levelFilter]);
@@ -149,7 +152,7 @@ export default function AchievementsPage() {
                         {filtered.map(u => {
                             const key = `${u.type}-${u.id}`;
                             const isExpanded = expanded === key;
-                            const levelCfg = LEVEL_CONFIG[u.level] ?? LEVEL_CONFIG["Bronz"];
+                            const levelCfg = LEVEL_CONFIG[u.rank] ?? LEVEL_CONFIG["Bronz"];
                             const avgScore = u.examAttempts.length > 0
                                 ? Math.round(u.examAttempts.reduce((acc, a) => acc + (a.score / a.totalQuestions) * 100, 0) / u.examAttempts.length)
                                 : null;
@@ -179,7 +182,7 @@ export default function AchievementsPage() {
                                         {/* Seviye */}
                                         <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold w-fit ${levelCfg.bg} ${levelCfg.color}`}>
                                             {levelCfg.icon}
-                                            {u.level}
+                                            {u.rank}
                                         </span>
 
                                         {/* XP */}

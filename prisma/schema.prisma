@@ -54,6 +54,7 @@ model User {
   sentMessages     UserMessage[] @relation("SentMessages")
   receivedMessages UserMessage[] @relation("ReceivedMessages")
   observerReports  ObserverReport[]
+  supportTickets   SupportTicket[]
   createdAssignments ExamAssignment[]
   announcementReads AnnouncementRead[]
   userMatchAssignments UserMatchAssignment[]
@@ -633,6 +634,25 @@ model RuleProgress {
   @@index([userId])
   @@index([userId, type])
   @@map("rule_progress")
+}
+
+model SupportTicket {
+  id          Int      @id @default(autoincrement())
+  user        User     @relation(fields: [userId], references: [id])
+  userId      Int
+  errorType   String   // "TEKNIK_HATA", "SINAV_SORUNU", "KURAL_KITABI", "ODEME", "ATAMA", "DIGER"
+  subject     String
+  description String   @db.Text
+  imageUrl    String?
+  status      String   @default("OPEN") // "OPEN", "IN_PROGRESS", "CLOSED"
+  adminNote   String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("support_tickets")
 }
 
 model WorkerSyncLog {

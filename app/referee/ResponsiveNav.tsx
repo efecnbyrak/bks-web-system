@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { User, Calendar, MoreHorizontal, X, Sparkles, LayoutDashboard, Users, Briefcase, CheckCircle, Megaphone, ClipboardList, Trophy, Bell } from "lucide-react";
+import { User, Calendar, MoreHorizontal, X, Sparkles, LayoutDashboard, Users, Briefcase, CheckCircle, Megaphone, ClipboardList, Trophy, Bell, HeadphonesIcon } from "lucide-react";
 import { SignOutButton } from "@/components/auth/SignOutButton";
 import { ROUTES } from "@/lib/routes";
 
@@ -347,6 +347,18 @@ export function ResponsiveNav({ refereeName, roleType, basePath = "/referee", ti
                                     </Link>
                                 )}
 
+                                <Link
+                                    href={`${basePath}/ticket`}
+                                    prefetch={false}
+                                    className={`flex items-center gap-3 px-4 py-2.5 rounded-xl font-medium transition-all text-[16px] ${isActive(`${basePath}/ticket`)
+                                        ? "bg-red-700 text-white shadow-md border-l-4 border-red-900 scale-[1.02]"
+                                        : "hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 hover:translate-x-1"
+                                        }`}
+                                >
+                                    <HeadphonesIcon className="w-4 h-4 text-blue-500" />
+                                    Destek & İletişim
+                                </Link>
+
                                 {isAdminObserver && (
                                     <>
                                         <div className="pt-6 pb-2 px-4 border-t border-zinc-100 dark:border-zinc-800 mt-4">
@@ -493,6 +505,11 @@ export function ResponsiveNav({ refereeName, roleType, basePath = "/referee", ti
                                     Rapor Girişi
                                 </Link>
                             )}
+
+                            <Link href={`${basePath}/ticket`} onClick={() => setIsMoreOpen(false)} prefetch={false} className={drawerLink(isActive(`${basePath}/ticket`))}>
+                                <HeadphonesIcon className="w-4 h-4 text-blue-500" />
+                                Destek & İletişim
+                            </Link>
 
                             {isAdminObserver && (
                                 <Link href={ROUTES.ADMIN} onClick={() => setIsMoreOpen(false)} prefetch={false} className="flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all text-[15px] bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40">

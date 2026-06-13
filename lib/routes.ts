@@ -43,11 +43,19 @@ export const ROUTES = {
     ADMIN_SETTINGS: "/admin/settings",
     ADMIN_MATCHES: "/admin/matches",
 
+    // Ticket routes
+    REFEREE_TICKET: "/referee/ticket",
+    GENERAL_TICKET: "/general/ticket",
+    ADMIN_TICKETS: "/admin/tickets",
+
     // API routes
     API_MATCHES_NOTIFICATION: "/api/matches/notification",
     API_ANNOUNCEMENTS_UNREAD: "/api/announcements/unread",
     API_USER_ASSIGNMENTS: "/api/user/assignments",
     API_USER_EXAM_HISTORY: "/api/user/exam-history",
+    API_USER_ACHIEVEMENT_DATA: "/api/user/achievement-data",
+    API_TICKETS: "/api/tickets",
+    API_ADMIN_TICKETS: "/api/admin/tickets",
 } as const;
 
 export type Route = typeof ROUTES[keyof typeof ROUTES];
