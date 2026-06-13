@@ -12,6 +12,7 @@ interface SettingsFormProps {
     initialWeekNumber: string;
     initialIbanRequired: boolean;
     initialMaintenanceMode: boolean;
+    initialAchievementsMaintenanceMode: boolean;
     isSuperAdmin: boolean;
 }
 
@@ -22,6 +23,7 @@ export function SettingsForm({
     initialWeekNumber,
     initialIbanRequired,
     initialMaintenanceMode,
+    initialAchievementsMaintenanceMode,
     isSuperAdmin
 }: SettingsFormProps) {
     const [loading, setLoading] = useState(false);
@@ -34,6 +36,7 @@ export function SettingsForm({
     const [weekNumberVal, setWeekNumberVal] = useState(initialWeekNumber);
     const [ibanRequiredVal, setIbanRequiredVal] = useState(initialIbanRequired);
     const [maintenanceModeVal, setMaintenanceModeVal] = useState(initialMaintenanceMode);
+    const [achievementsMaintenanceModeVal, setAchievementsMaintenanceModeVal] = useState(initialAchievementsMaintenanceMode);
 
     const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -48,6 +51,7 @@ export function SettingsForm({
             { key: "AVAILABILITY_TARGET_DATE", value: new Date(targetDateVal).toISOString() },
             { key: "IBAN_COLLECTION_ENABLED", value: String(ibanRequiredVal) },
             { key: "MATCHES_MAINTENANCE_MODE", value: String(maintenanceModeVal) },
+            { key: "ACHIEVEMENTS_MAINTENANCE_MODE", value: String(achievementsMaintenanceModeVal) },
             ...(targetChanged ? [{ key: "AVAILABILITY_TARGET_MANUAL", value: "true" }] : []),
         ];
 
@@ -233,6 +237,26 @@ export function SettingsForm({
                                     <div className={`absolute top-1 left-1 w-5 h-5 bg-white rounded-full transition-transform ${maintenanceModeVal ? 'translate-x-7' : 'translate-x-0'}`} />
                                 </button>
                                 <span className={`text-[10px] font-black uppercase italic ${maintenanceModeVal ? 'text-orange-500' : 'text-zinc-400'}`}>AKTİF</span>
+                            </div>
+                        </div>
+                    )}
+
+                    {isSuperAdmin && (
+                        <div className="flex flex-col md:flex-row md:items-center justify-between p-5 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl gap-4 border border-zinc-100 dark:border-zinc-800">
+                            <div>
+                                <p className="font-black text-zinc-900 dark:text-white text-sm uppercase italic">Başarımlar Bakım Modu</p>
+                                <p className="text-xs text-zinc-500 font-bold uppercase italic">Aktif edilirse, Başarımlar sayfası bakım moduna girer. Efe Can Bayrak hariç herkes uyarı görür.</p>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <span className={`text-[10px] font-black uppercase italic ${!achievementsMaintenanceModeVal ? 'text-zinc-400' : 'text-zinc-300'}`}>PASİF</span>
+                                <button
+                                    type="button"
+                                    onClick={() => setAchievementsMaintenanceModeVal(!achievementsMaintenanceModeVal)}
+                                    className={`relative w-14 h-7 rounded-full transition-colors ${achievementsMaintenanceModeVal ? 'bg-amber-500' : 'bg-zinc-300 dark:bg-zinc-600'}`}
+                                >
+                                    <div className={`absolute top-1 left-1 w-5 h-5 bg-white rounded-full transition-transform ${achievementsMaintenanceModeVal ? 'translate-x-7' : 'translate-x-0'}`} />
+                                </button>
+                                <span className={`text-[10px] font-black uppercase italic ${achievementsMaintenanceModeVal ? 'text-amber-500' : 'text-zinc-400'}`}>AKTİF</span>
                             </div>
                         </div>
                     )}

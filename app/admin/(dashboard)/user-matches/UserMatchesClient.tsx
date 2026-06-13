@@ -26,6 +26,8 @@ interface UserItem {
     matchCount: number;
 }
 
+type MatchWithRole = MatchData & { myRole?: string; nameInSpreadsheet?: string };
+
 interface UserMatchesClientProps {
     users: UserItem[];
     lastSync: string | null;
@@ -90,9 +92,9 @@ function isUpcoming(dateStr: string): boolean {
     return d >= today;
 }
 
-function MatchCard({ match, firstName, lastName }: { match: MatchData; firstName: string; lastName: string }) {
+function MatchCard({ match, firstName, lastName, dbRole }: { match: MatchData & { myRole?: string }; firstName: string; lastName: string; dbRole?: string }) {
     const [expanded, setExpanded] = useState(false);
-    const role = getRoleInMatch(match, firstName, lastName);
+    const role = dbRole || getRoleInMatch(match, firstName, lastName);
     const upcoming = isUpcoming(match.tarih);
 
     return (
@@ -115,7 +117,7 @@ function MatchCard({ match, firstName, lastName }: { match: MatchData; firstName
                                 </span>
                             )}
                         </div>
-                        <p className="font-bold text-zinc-900 dark:text-zinc-100 text-[15px] leading-snug truncate">
+                        <p className="font-bold text-zinc-900 dark:text-zinc-100 text-[15px] leading-snug line-clamp-2">
                             {match.mac_adi}
                         </p>
                         <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-sm text-zinc-500 dark:text-zinc-400">
@@ -197,7 +199,7 @@ function PersonnelRow({ icon, label, names, highlight }: { icon: React.ReactNode
 export function UserMatchesClient({ users, lastSync }: UserMatchesClientProps) {
     const [search, setSearch] = useState("");
     const [selectedUser, setSelectedUser] = useState<UserItem | null>(null);
-    const [matches, setMatches] = useState<MatchData[]>([]);
+    const [matches, setMatches] = useState<MatchWithRole[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [filter, setFilter] = useState<"all" | "upcoming" | "past">("all");
@@ -228,7 +230,7 @@ export function UserMatchesClient({ users, lastSync }: UserMatchesClientProps) {
         }
     }
 
-    const displayMatches = useMemo(() => {
+    const displayMatches = useMemo<MatchWithRole[]>(() => {
         if (filter === "upcoming") return matches.filter(m => isUpcoming(m.tarih));
         if (filter === "past") return matches.filter(m => !isUpcoming(m.tarih));
         return matches;
@@ -252,7 +254,7 @@ export function UserMatchesClient({ users, lastSync }: UserMatchesClientProps) {
     const upcomingCount = useMemo(() => matches.filter(m => isUpcoming(m.tarih)).length, [matches]);
 
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-4 min-h-[70vh]">
+        <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] xl:grid-cols-[360px_1fr] gap-4 min-h-[70vh]">
             {/* User List */}
             <div className={`flex flex-col gap-3 ${selectedUser ? "hidden lg:flex" : "flex"}`}>
                 {/* Search */}
@@ -271,7 +273,7 @@ export function UserMatchesClient({ users, lastSync }: UserMatchesClientProps) {
                     {filtered.length} kullanıcı
                 </p>
 
-                <div className="space-y-2 overflow-y-auto max-h-[calc(100vh-280px)] pr-1 modern-scrollbar">
+                <div className="space-y-2 overflow-y-auto max-h-[calc(100vh-240px)] md:max-h-[calc(100vh-280px)] pr-1 modern-scrollbar">
                     {filtered.map(u => (
                         <button
                             key={u.id}
@@ -411,13 +413,14 @@ export function UserMatchesClient({ users, lastSync }: UserMatchesClientProps) {
                                 <p className="text-sm mt-2">Bu kullanıcı için henüz maç verisi senkronize edilmemiş.</p>
                             </div>
                         ) : (
-                            <div className="space-y-2.5 overflow-y-auto max-h-[calc(100vh-340px)] pr-1 modern-scrollbar">
+                            <div className="space-y-2.5 overflow-y-auto max-h-[calc(100vh-280px)] md:max-h-[calc(100vh-320px)] pr-1 modern-scrollbar">
                                 {sortedMatches.map((m, i) => (
                                     <MatchCard
                                         key={i}
                                         match={m}
                                         firstName={selectedUser.firstName}
                                         lastName={selectedUser.lastName}
+                                        dbRole={m.myRole}
                                     />
                                 ))}
                             </div>

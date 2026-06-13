@@ -118,20 +118,21 @@ function computeXPAndRank(data: {
     if (totalQuestionsAnswered >= 200) add("Soru Çözücü", 120);
     if (totalQuestionsAnswered >= 1000) add("Hakem Refleksi", 300);
     if (totalQuestionsAnswered >= 2000) add("Analizci Hakem", 200);
-    if (totalQuestionsAnswered >= 1000) add("Efsanevi Öğrenci", 2000);
+    if (totalQuestionsAnswered >= 5000) add("Efsanevi Öğrenci", 2000);
 
-    // Ardışık doğru (admin tarafında hesaplanamaz kolayca; threshold check)
     // Final rozetler (kombinasyon)
     if (hardExamCount >= 1 && perfectExams >= 1) add("Final Boss", 2000);
 
-    const allCount = 40; // toplam rozet sayısı
-    if (earned.length >= Math.ceil(allCount * 0.8)) add("BKS Şampiyonu", 2500);
+    // Normal rozet sayısı (legend öncesi) — BKS Şampiyonu buraya göre hesaplanır
+    const normalBadgeCount = 38;
+    if (earned.length >= Math.ceil(normalBadgeCount * 0.8)) add("BKS Şampiyonu", 2500);
 
     if (kuralPct >= 1.0 && data.totalVideoCount > 0 && data.videoWatchedCount >= data.totalVideoCount && examCount >= 10) {
         add("Sistemin Efendisi", 3000);
         add("Ultimate Master", 4000);
     }
 
+    const allCount = normalBadgeCount + 3; // +BKS Şampiyonu, Sistemin Efendisi, Ultimate Master
     if (earned.length >= allCount) add("BKS LEGEND", 0);
 
     // Rank hesaplama
@@ -198,8 +199,8 @@ export async function getAllUsersAchievements(): Promise<{ success: boolean; dat
         ]);
 
         const [totalKuralArticles, totalYorumArticles] = await Promise.all([
-            db.ruleProgress.groupBy({ by: ["articleId"], where: { type: "kural" } }).then((r) => r.length),
-            db.ruleProgress.groupBy({ by: ["articleId"], where: { type: "yorum" } }).then((r) => r.length),
+            db.ruleProgress.findMany({ distinct: ["articleId"], where: { type: "kural" }, select: { articleId: true } }).then((r) => Math.max(r.length, 1)),
+            db.ruleProgress.findMany({ distinct: ["articleId"], where: { type: "yorum" }, select: { articleId: true } }).then((r) => Math.max(r.length, 1)),
         ]);
 
         const allAssignments = await db.examAssignment.findMany({

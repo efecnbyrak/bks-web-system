@@ -34,16 +34,20 @@ const USER_TYPES = ["Tümü", "Hakem", "Görevli"];
 export default function AchievementsPage() {
     const [data, setData] = useState<UserAchievementData[]>([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     const [expanded, setExpanded] = useState<string | null>(null);
     const [search, setSearch] = useState("");
     const [typeFilter, setTypeFilter] = useState("Tümü");
     const [levelFilter, setLevelFilter] = useState("Tümü");
 
     useEffect(() => {
-        getAllUsersAchievements().then(res => {
-            if (res.success && res.data) setData(res.data);
-            setLoading(false);
-        });
+        getAllUsersAchievements()
+            .then(res => {
+                if (res.success && res.data) setData(res.data);
+                else setError(res.error ?? "Bilinmeyen hata");
+            })
+            .catch(e => setError(e?.message ?? "Sunucu hatası"))
+            .finally(() => setLoading(false));
     }, []);
 
     const filtered = useMemo(() => {
@@ -67,6 +71,15 @@ export default function AchievementsPage() {
         return (
             <div className="flex items-center justify-center min-h-[60vh]">
                 <Loader2 className="w-8 h-8 animate-spin text-zinc-400" />
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3 text-red-500">
+                <Trophy className="w-10 h-10 opacity-40" />
+                <p className="text-sm font-bold">Başarılar yüklenemedi: {error}</p>
             </div>
         );
     }

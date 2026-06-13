@@ -525,7 +525,7 @@ function ExamHistorySection({ attempts }: { attempts: ExamAttempt[] }) {
     );
 }
 
-export function AchievementsSection() {
+export function AchievementsSection({ maintenanceMode = false }: { maintenanceMode?: boolean }) {
     const [data, setData] = useState<AchievementData>({
         completedAssignments: 0, totalAssignments: 0, kuralVisited: false, yorumVisited: false,
         examAttempts: [], loginCount: 0, isProfileComplete: false, videoWatchedCount: 0,
@@ -561,6 +561,27 @@ export function AchievementsSection() {
 
     const filteredEarned = activeTab === "all" ? earned : earned.filter((a) => a.tier === activeTab);
     const filteredLocked = activeTab === "all" ? locked : locked.filter((a) => a.tier === activeTab);
+
+    if (maintenanceMode) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[300px] text-center gap-6 px-4 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-8">
+                <div className="w-20 h-20 rounded-full bg-amber-100 dark:bg-amber-900/20 flex items-center justify-center">
+                    <svg className="w-10 h-10 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                </div>
+                <div>
+                    <h2 className="text-2xl font-black uppercase italic text-zinc-900 dark:text-white tracking-tight mb-2">
+                        Bakım Modunda
+                    </h2>
+                    <p className="text-zinc-500 dark:text-zinc-400 font-bold uppercase italic text-sm max-w-sm">
+                        Başarımlar sayfası şu anda bakım modundadır. Lütfen daha sonra tekrar deneyin.
+                    </p>
+                </div>
+            </div>
+        );
+    }
 
     if (loading) {
         return (

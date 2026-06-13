@@ -5,6 +5,8 @@ import { Suspense } from "react";
 import { RefereeProfileSection } from "../components/RefereeProfileSection";
 import { RefereeAvailabilitySection } from "../components/RefereeAvailabilitySection";
 import { AchievementsSection } from "../components/AchievementsSection";
+import { getSetting } from "@/lib/settings-cache";
+import { db } from "@/lib/db";
 
 function SectionLoading({ height = "h-32" }: { height?: string }) {
     return <div className={`w-full ${height} bg-zinc-100 dark:bg-zinc-800 animate-pulse rounded-xl`} />;
@@ -12,6 +14,22 @@ function SectionLoading({ height = "h-32" }: { height?: string }) {
 
 export default async function RefereeProfileDashboard() {
     const session = await verifySession();
+
+    const [achievementsMaintenanceSetting, user] = await Promise.all([
+        getSetting("ACHIEVEMENTS_MAINTENANCE_MODE"),
+        db.user.findUnique({
+            where: { id: session.userId },
+            select: {
+                referee: { select: { firstName: true, lastName: true } },
+                official: { select: { firstName: true, lastName: true } },
+            },
+        }),
+    ]);
+
+    const firstName = user?.referee?.firstName || user?.official?.firstName || "";
+    const lastName = user?.referee?.lastName || user?.official?.lastName || "";
+    const isEfeCan = firstName.toUpperCase().includes("EFE") && lastName.toUpperCase().includes("BAYRAK");
+    const achievementsInMaintenance = achievementsMaintenanceSetting === "true" && !isEfeCan;
 
     return (
         <div className="max-w-5xl mx-auto space-y-8">
@@ -53,7 +71,7 @@ export default async function RefereeProfileDashboard() {
             </div>
 
             {/* Achievements Section */}
-            <AchievementsSection />
+            <AchievementsSection maintenanceMode={achievementsInMaintenance} />
         </div>
     );
 }

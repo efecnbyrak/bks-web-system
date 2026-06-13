@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import {
     Ticket, Search, ChevronDown, CheckCircle, Clock, AlertCircle,
-    X, Save, Trash2, Filter, RefreshCw, ImageIcon, Wrench, Lightbulb,
+    X, Save, Trash2, RefreshCw, ImageIcon, Wrench, Lightbulb,
     MessageSquare, Maximize2, FileImage, Loader2,
 } from "lucide-react";
 
@@ -23,11 +23,11 @@ interface AdminTicket {
     updatedAt: string;
 }
 
-const STATUS_OPTIONS = [
+const TAB_OPTIONS = [
     { value: "ALL", label: "Tümü" },
     { value: "OPEN", label: "Beklemede" },
     { value: "IN_PROGRESS", label: "İnceleniyor" },
-    { value: "CLOSED", label: "Kapatıldı" },
+    { value: "CLOSED", label: "Kapatılmış" },
 ];
 
 const STATUS_STYLES: Record<string, { label: string; icon: React.ReactNode; color: string; bg: string; ring: string }> = {
@@ -190,7 +190,7 @@ export default function AdminTicketsPage() {
                 </div>
 
                 {/* Filtreler */}
-                <div className="flex gap-3 flex-wrap">
+                <div className="flex flex-col sm:flex-row gap-3">
                     <div className="relative flex-1 min-w-48">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
                         <input
@@ -201,16 +201,36 @@ export default function AdminTicketsPage() {
                             className="w-full pl-9 pr-4 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-sm text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 transition-all"
                         />
                     </div>
-                    <div className="relative">
-                        <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" />
-                        <select
-                            value={statusFilter}
-                            onChange={(e) => setStatusFilter(e.target.value)}
-                            className="pl-9 pr-8 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-sm text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 appearance-none"
-                        >
-                            {STATUS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                        </select>
-                        <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" />
+                    <div className="flex gap-1.5 flex-wrap">
+                        {TAB_OPTIONS.map((tab) => {
+                            const count = tab.value === "ALL"
+                                ? tickets.length
+                                : tab.value === "OPEN" ? openCount
+                                : tab.value === "IN_PROGRESS" ? inProgressCount
+                                : closedCount;
+                            const isActive = statusFilter === tab.value;
+                            return (
+                                <button
+                                    key={tab.value}
+                                    onClick={() => setStatusFilter(tab.value)}
+                                    className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all ${
+                                        isActive
+                                            ? tab.value === "OPEN" ? "bg-amber-500 text-white shadow-sm"
+                                            : tab.value === "IN_PROGRESS" ? "bg-blue-600 text-white shadow-sm"
+                                            : tab.value === "CLOSED" ? "bg-emerald-600 text-white shadow-sm"
+                                            : "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 shadow-sm"
+                                            : "bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:border-zinc-300 dark:hover:border-zinc-600"
+                                    }`}
+                                >
+                                    {tab.label}
+                                    <span className={`inline-flex items-center justify-center min-w-[18px] h-4 px-1 rounded text-[10px] font-black ${
+                                        isActive ? "bg-white/20" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400"
+                                    }`}>
+                                        {count}
+                                    </span>
+                                </button>
+                            );
+                        })}
                     </div>
                 </div>
 

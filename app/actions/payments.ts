@@ -90,38 +90,29 @@ const IU_SPOR_SOLEN_PATTERN = /^İ\.Ü\s+\d+\.\s+SPOR\s+ŞÖLEN/i;
 
 export async function getAllMatchCategories(): Promise<string[]> {
     try {
-        const setting = await db.systemSetting.findUnique({ where: { key: "GLOBAL_MATCH_REGISTRY" } });
         const cats = new Set<string>();
 
         // Always include static categories
         for (const cat of STATIC_OZEL_LIG_CATEGORIES) cats.add(cat);
 
-        // Detect İ.Ü SPOR ŞÖLEN number from registry, fallback to default
+        // Detect İ.Ü SPOR ŞÖLEN number from registry (fallback to default)
         let iuSporSolen = IU_SPOR_SOLEN_DEFAULT;
 
-        if (setting?.value) {
-            const registry = JSON.parse(setting.value);
-            const matches: any[] = registry.allMatches || [];
+        // Pull distinct categories directly from ParsedMatch DB table
+        const dbRows = await db.parsedMatch.findMany({
+            where: { ligTuru: "ÖZEL LİG VE ÜNİVERSİTE" },
+            select: { kategori: true },
+            distinct: ["kategori"],
+        });
 
-            // Scan for İ.Ü SPOR ŞÖLEN variant (yearly number changes)
-            for (const m of matches) {
-                const trimmed = (m.kategori || "").trim();
-                if (IU_SPOR_SOLEN_PATTERN.test(trimmed)) {
-                    iuSporSolen = trimmed;
-                    break;
-                }
+        for (const row of dbRows) {
+            const trimmed = row.kategori.trim();
+            if (!trimmed) continue;
+            if (IU_SPOR_SOLEN_PATTERN.test(trimmed)) {
+                iuSporSolen = trimmed;
             }
-
-            // Add dynamic categories from registry
-            for (const m of matches) {
-                if (
-                    m.ligTuru === "ÖZEL LİG VE ÜNİVERSİTE" &&
-                    m.kategori &&
-                    m.kategori.trim().length > 0 &&
-                    isValidOzelLigCategory(m.kategori)
-                ) {
-                    cats.add(m.kategori.trim());
-                }
+            if (isValidOzelLigCategory(trimmed)) {
+                cats.add(trimmed);
             }
         }
 
