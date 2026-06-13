@@ -38,6 +38,7 @@ export const ROUTES = {
     ADMIN_ATAMALAR: "/admin/atamalar",
     ADMIN_USER_MATCHES: "/admin/user-matches",
     ADMIN_PAYMENTS: "/admin/payments",
+    ADMIN_ACHIEVEMENTS: "/admin/achievements",
     ADMIN_LOGS: "/admin/logs",
     ADMIN_SETTINGS: "/admin/settings",
     ADMIN_MATCHES: "/admin/matches",

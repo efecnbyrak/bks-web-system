@@ -245,6 +245,20 @@ export function AdminLayoutClient({ children, role, imageUrl }: AdminLayoutClien
                             </Link>
                         )}
 
+                        {role === "SUPER_ADMIN" && (
+                            <Link
+                                href={ROUTES.ADMIN_ACHIEVEMENTS}
+                                prefetch={false}
+                                className={`flex items-center gap-3 px-4 py-2.5 rounded-xl font-medium transition-all text-[16px] ${isActive(ROUTES.ADMIN_ACHIEVEMENTS)
+                                    ? "bg-red-700 text-white shadow-md border-l-4 border-red-900"
+                                    : "hover:bg-zinc-800/50 text-zinc-400 hover:text-white"
+                                    }`}
+                            >
+                                <Trophy className="w-4 h-4 text-amber-400" />
+                                Başarılar
+                            </Link>
+                        )}
+
                         <div className="pt-3 pb-1 px-4">
                             <span className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em]">Sistem</span>
                         </div>
