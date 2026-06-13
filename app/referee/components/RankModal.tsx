@@ -1,13 +1,46 @@
 "use client";
 
-import { X, Shield, Trophy, Crown, Gem, Star, Flame, Zap, Lock } from "lucide-react";
+import { X, Shield, Trophy, Crown, Gem, Star, Flame, Zap, Lock, Sparkles, Swords, Medal } from "lucide-react";
+
+// Her rank için büyük, renkli SVG ikon bileşenleri
+function RankIcon({ rank }: { rank: string }) {
+    const size = "w-6 h-6";
+    switch (rank) {
+        case "Başlangıç":
+            return <Shield className={`${size} text-zinc-300`} />;
+        case "Bronz":
+            return (
+                <svg viewBox="0 0 24 24" className={size} fill="none" stroke="currentColor" strokeWidth={1.8}>
+                    <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="#b45309" stroke="#92400e" />
+                </svg>
+            );
+        case "Gümüş":
+            return (
+                <svg viewBox="0 0 24 24" className={size} fill="none">
+                    <polygon points="12,2 15.5,8.5 22,9.5 17,14.5 18.5,21 12,17.5 5.5,21 7,14.5 2,9.5 8.5,8.5" fill="#d4d4d8" stroke="#a1a1aa" strokeWidth="1.5" />
+                </svg>
+            );
+        case "Altın":
+            return <Trophy className={`${size} text-amber-400`} style={{ filter: "drop-shadow(0 0 4px #fbbf24)" }} />;
+        case "Platin":
+            return <Crown className={`${size} text-teal-300`} style={{ filter: "drop-shadow(0 0 4px #2dd4bf)" }} />;
+        case "Elmas":
+            return <Gem className={`${size} text-sky-300`} style={{ filter: "drop-shadow(0 0 6px #38bdf8)" }} />;
+        case "Master":
+            return <Swords className={`${size} text-violet-300`} style={{ filter: "drop-shadow(0 0 6px #a78bfa)" }} />;
+        case "Legend":
+            return <Sparkles className={`${size} text-rose-300`} style={{ filter: "drop-shadow(0 0 8px #fb7185)" }} />;
+        default:
+            return <Star className={size} />;
+    }
+}
 
 export const RANKS = [
     {
         name: "Başlangıç",
         minXP: 0,
         maxXP: 100,
-        icon: <Shield className="w-5 h-5" />,
+        icon: <RankIcon rank="Başlangıç" />,
         gradient: "from-zinc-400 to-zinc-500",
         glowColor: "shadow-zinc-400/30",
         ring: "ring-zinc-400/40",
@@ -19,10 +52,10 @@ export const RANKS = [
         name: "Bronz",
         minXP: 100,
         maxXP: 500,
-        icon: <Shield className="w-5 h-5" />,
-        gradient: "from-amber-700 to-amber-500",
-        glowColor: "shadow-amber-600/30",
-        ring: "ring-amber-600/40",
+        icon: <RankIcon rank="Bronz" />,
+        gradient: "from-amber-800 to-amber-600",
+        glowColor: "shadow-amber-700/40",
+        ring: "ring-amber-700/50",
         textColor: "text-amber-700",
         bgColor: "bg-amber-50 dark:bg-amber-900/20",
         description: "Temel kuralları öğrenmeye başladın",
@@ -31,11 +64,11 @@ export const RANKS = [
         name: "Gümüş",
         minXP: 500,
         maxXP: 1500,
-        icon: <Shield className="w-5 h-5" />,
-        gradient: "from-zinc-400 to-zinc-300",
-        glowColor: "shadow-zinc-400/30",
-        ring: "ring-zinc-400/40",
-        textColor: "text-zinc-500",
+        icon: <RankIcon rank="Gümüş" />,
+        gradient: "from-zinc-300 to-zinc-400",
+        glowColor: "shadow-zinc-300/40",
+        ring: "ring-zinc-300/50",
+        textColor: "text-zinc-400",
         bgColor: "bg-zinc-50 dark:bg-zinc-800/60",
         description: "Kuralları kavramaya ve sınavlara girmeye başladın",
     },
@@ -43,10 +76,10 @@ export const RANKS = [
         name: "Altın",
         minXP: 1500,
         maxXP: 4000,
-        icon: <Trophy className="w-5 h-5" />,
+        icon: <RankIcon rank="Altın" />,
         gradient: "from-amber-400 to-yellow-300",
-        glowColor: "shadow-amber-400/40",
-        ring: "ring-amber-400/40",
+        glowColor: "shadow-amber-400/50",
+        ring: "ring-amber-400/50",
         textColor: "text-amber-500",
         bgColor: "bg-amber-50 dark:bg-amber-900/20",
         description: "Sınav başarıları ve kural kitabında ilerleme kaydediyorsun",
@@ -55,10 +88,10 @@ export const RANKS = [
         name: "Platin",
         minXP: 4000,
         maxXP: 8000,
-        icon: <Crown className="w-5 h-5" />,
+        icon: <RankIcon rank="Platin" />,
         gradient: "from-teal-400 to-cyan-300",
-        glowColor: "shadow-teal-400/40",
-        ring: "ring-teal-400/40",
+        glowColor: "shadow-teal-400/50",
+        ring: "ring-teal-400/50",
         textColor: "text-teal-500",
         bgColor: "bg-teal-50 dark:bg-teal-900/20",
         description: "Kural kitabının büyük bölümünü bitirdin, zorlu sınavlara hazırsın",
@@ -67,10 +100,10 @@ export const RANKS = [
         name: "Elmas",
         minXP: 8000,
         maxXP: 15000,
-        icon: <Gem className="w-5 h-5" />,
+        icon: <RankIcon rank="Elmas" />,
         gradient: "from-sky-400 to-indigo-400",
-        glowColor: "shadow-sky-400/50",
-        ring: "ring-sky-400/50",
+        glowColor: "shadow-sky-400/60",
+        ring: "ring-sky-400/60",
         textColor: "text-sky-500",
         bgColor: "bg-sky-50 dark:bg-sky-900/20",
         description: "Kural kitabını %100 tamamladın, tüm videoları izledin",
@@ -79,10 +112,10 @@ export const RANKS = [
         name: "Master",
         minXP: 15000,
         maxXP: 25000,
-        icon: <Star className="w-5 h-5" />,
+        icon: <RankIcon rank="Master" />,
         gradient: "from-violet-500 to-purple-400",
-        glowColor: "shadow-violet-500/40",
-        ring: "ring-violet-500/40",
+        glowColor: "shadow-violet-500/50",
+        ring: "ring-violet-500/50",
         textColor: "text-violet-500",
         bgColor: "bg-violet-50 dark:bg-violet-900/20",
         description: "25+ sınav, mükemmel skorlar, sistemin hakimisin",
@@ -91,10 +124,10 @@ export const RANKS = [
         name: "Legend",
         minXP: 25000,
         maxXP: Infinity,
-        icon: <Crown className="w-5 h-5" />,
+        icon: <RankIcon rank="Legend" />,
         gradient: "from-rose-500 via-orange-400 to-amber-300",
-        glowColor: "shadow-rose-500/50",
-        ring: "ring-rose-500/50",
+        glowColor: "shadow-rose-500/60",
+        ring: "ring-rose-500/60",
         textColor: "text-rose-500",
         bgColor: "bg-rose-50 dark:bg-rose-900/20",
         description: "Tüm başarıları tamamladın. BKS'nin efsanesi oldun!",

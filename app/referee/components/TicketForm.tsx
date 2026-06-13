@@ -1,57 +1,85 @@
 "use client";
 
-import { useState, useRef } from "react";
-import { Send, Upload, X, CheckCircle, Clock, AlertCircle, ChevronDown, Image as ImageIcon, FileText } from "lucide-react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import {
+    Wrench, Lightbulb, Plus, X, ChevronDown, ChevronUp,
+    Upload, Send, Clock, CheckCircle,
+    AlertCircle, Loader2, MessageSquare, Eye,
+    FileImage, Maximize2
+} from "lucide-react";
 
-const ERROR_TYPES = [
+type TicketType = "DESTEK" | "ONERI";
+
+const SUPPORT_ERROR_TYPES = [
     { value: "TEKNIK_HATA", label: "Teknik Hata" },
     { value: "SINAV_SORUNU", label: "Sınav Sorunu" },
     { value: "KURAL_KITABI", label: "Kural Kitabı" },
-    { value: "ODEME", label: "Ödeme" },
-    { value: "ATAMA", label: "Atama" },
-    { value: "HESAP", label: "Hesap / Profil" },
+    { value: "ATAMA", label: "Atama Sorunu" },
+    { value: "HESAP", label: "Hesap Sorunu" },
     { value: "DIGER", label: "Diğer" },
 ];
 
-const STATUS_LABELS: Record<string, { label: string; icon: React.ReactNode; color: string; bg: string }> = {
-    OPEN: { label: "Beklemede", icon: <Clock className="w-3.5 h-3.5" />, color: "text-amber-600", bg: "bg-amber-50 dark:bg-amber-900/20" },
-    IN_PROGRESS: { label: "İnceleniyor", icon: <AlertCircle className="w-3.5 h-3.5" />, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-900/20" },
-    CLOSED: { label: "Kapatıldı", icon: <CheckCircle className="w-3.5 h-3.5" />, color: "text-emerald-600", bg: "bg-emerald-50 dark:bg-emerald-900/20" },
+const SUGGESTION_TYPES = [
+    { value: "GENEL", label: "Genel Öneri" },
+    { value: "UYGULAMA", label: "Uygulama İyileştirmesi" },
+    { value: "KURAL", label: "Kural / Mevzuat" },
+    { value: "EGITIM", label: "Eğitim & İçerik" },
+    { value: "DIGER", label: "Diğer" },
+];
+
+const STATUS_CONFIG = {
+    OPEN: { label: "Beklemede", color: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400", icon: Clock },
+    IN_PROGRESS: { label: "İnceleniyor", color: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400", icon: AlertCircle },
+    CLOSED: { label: "Kapatıldı", color: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400", icon: CheckCircle },
 };
 
 interface Ticket {
     id: number;
+    type: string;
     errorType: string;
     subject: string;
     description: string;
-    imageUrl: string | null;
+    imageUrls: string | null;
     status: string;
     adminNote: string | null;
     createdAt: string;
 }
 
-interface TicketFormProps {
-    basePath: string;
+interface UploadingFile {
+    id: string;
+    name: string;
+    progress: number;
+    url?: string;
+    error?: string;
+    preview?: string;
 }
 
-export function TicketForm({ basePath }: TicketFormProps) {
+const MAX_IMAGES = 5;
+const MAX_TOTAL_MB = 10;
+
+export function TicketForm() {
+    const [activeTab, setActiveTab] = useState<TicketType>("DESTEK");
+    const [view, setView] = useState<"list" | "new">("list");
     const [tickets, setTickets] = useState<Ticket[]>([]);
     const [loadingTickets, setLoadingTickets] = useState(true);
-    const [view, setView] = useState<"list" | "new">("list");
+    const [expandedTicket, setExpandedTicket] = useState<number | null>(null);
+    const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
 
+    // Form state
     const [errorType, setErrorType] = useState("");
     const [subject, setSubject] = useState("");
     const [description, setDescription] = useState("");
-    const [imageUrl, setImageUrl] = useState<string | null>(null);
-    const [uploading, setUploading] = useState(false);
+    const [uploadingFiles, setUploadingFiles] = useState<UploadingFile[]>([]);
     const [submitting, setSubmitting] = useState(false);
-    const [success, setSuccess] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const [expandedTicket, setExpandedTicket] = useState<number | null>(null);
+    const [success, setSuccess] = useState<string | null>(null);
+    const [formError, setFormError] = useState<string | null>(null);
+    const [isDragging, setIsDragging] = useState(false);
 
-    const fileRef = useRef<HTMLInputElement>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const fetchTickets = async () => {
+    const filteredTickets = tickets.filter((t) => t.type === activeTab);
+
+    const loadTickets = useCallback(async () => {
         setLoadingTickets(true);
         try {
             const res = await fetch("/api/tickets");
@@ -62,366 +90,656 @@ export function TicketForm({ basePath }: TicketFormProps) {
         } finally {
             setLoadingTickets(false);
         }
+    }, []);
+
+    useEffect(() => {
+        loadTickets();
+    }, [loadTickets]);
+
+    const resetForm = () => {
+        setErrorType("");
+        setSubject("");
+        setDescription("");
+        setUploadingFiles([]);
+        setFormError(null);
+        setSuccess(null);
     };
 
-    // Initial fetch
-    useState(() => { fetchTickets(); });
+    const uploadFile = async (file: File): Promise<string | null> => {
+        if (!file.type.startsWith("image/")) return null;
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                const dataUrl = e.target?.result as string;
+                const base64 = dataUrl.split(",")[1];
+                try {
+                    const res = await fetch("/api/tickets/upload", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ data: base64, type: file.type, name: file.name }),
+                    });
+                    if (!res.ok) resolve(null);
+                    else {
+                        const { url } = await res.json();
+                        resolve(url);
+                    }
+                } catch {
+                    resolve(null);
+                }
+            };
+            reader.readAsDataURL(file);
+        });
+    };
 
-    const handleImageUpload = async (file: File) => {
-        if (!file.type.startsWith("image/")) {
-            setError("Yalnızca görsel dosyaları yükleyebilirsiniz.");
+    const handleFiles = async (files: FileList | File[]) => {
+        const fileArr = Array.from(files).filter((f) => f.type.startsWith("image/"));
+        const currentCount = uploadingFiles.filter((f) => f.url && !f.error).length;
+
+        if (currentCount + fileArr.length > MAX_IMAGES) {
+            setFormError(`En fazla ${MAX_IMAGES} görsel yükleyebilirsiniz.`);
             return;
         }
-        if (file.size > 10 * 1024 * 1024) {
-            setError("Dosya boyutu 10MB'ı geçemez.");
+
+        const existingBytes = uploadingFiles
+            .filter((f) => f.url)
+            .reduce((acc, f) => {
+                const b64 = (f.url ?? "").split(",")[1] ?? "";
+                return acc + Math.ceil((b64.length * 3) / 4);
+            }, 0);
+        const newBytes = fileArr.reduce((acc, f) => acc + f.size, 0);
+        if (existingBytes + newBytes > MAX_TOTAL_MB * 1024 * 1024) {
+            setFormError(`Toplam görsel boyutu ${MAX_TOTAL_MB}MB'ı geçemez.`);
             return;
         }
 
-        setUploading(true);
-        setError(null);
-        try {
-            const CHUNK_SIZE = 512 * 1024;
-            const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+        setFormError(null);
 
-            const initRes = await fetch("/api/upload/init", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ filename: file.name, type: file.type, total: totalChunks }),
-            });
-            const { uploadId } = await initRes.json();
+        for (const file of fileArr) {
+            const id = `${Date.now()}-${Math.random()}`;
+            const preview = URL.createObjectURL(file);
 
-            for (let i = 0; i < totalChunks; i++) {
-                const chunk = file.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
-                const b64 = await new Promise<string>((res) => {
-                    const reader = new FileReader();
-                    reader.onload = (e) => res((e.target?.result as string).split(",")[1]);
-                    reader.readAsDataURL(chunk);
-                });
-                await fetch("/api/upload/chunk", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ uploadId, index: i, data: b64 }),
-                });
+            setUploadingFiles((prev) => [
+                ...prev,
+                { id, name: file.name, progress: 0, preview },
+            ]);
+
+            const progressInterval = setInterval(() => {
+                setUploadingFiles((prev) =>
+                    prev.map((f) =>
+                        f.id === id && f.progress < 85 ? { ...f, progress: f.progress + 20 } : f
+                    )
+                );
+            }, 120);
+
+            const url = await uploadFile(file);
+            clearInterval(progressInterval);
+
+            if (url) {
+                setUploadingFiles((prev) =>
+                    prev.map((f) => (f.id === id ? { ...f, progress: 100, url } : f))
+                );
+            } else {
+                setUploadingFiles((prev) =>
+                    prev.map((f) => (f.id === id ? { ...f, progress: 0, error: "Yükleme başarısız" } : f))
+                );
             }
-
-            const completeRes = await fetch("/api/upload/complete", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ uploadId }),
-            });
-            const { url } = await completeRes.json();
-            setImageUrl(url);
-        } catch {
-            setError("Görsel yüklenirken bir hata oluştu.");
-        } finally {
-            setUploading(false);
         }
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setError(null);
+    const removeFile = (id: string) => {
+        setUploadingFiles((prev) => {
+            const file = prev.find((f) => f.id === id);
+            if (file?.preview) URL.revokeObjectURL(file.preview);
+            return prev.filter((f) => f.id !== id);
+        });
+    };
 
-        if (!errorType || !subject.trim() || !description.trim()) {
-            setError("Lütfen tüm zorunlu alanları doldurun.");
-            return;
-        }
+    const handleDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragging(false);
+        handleFiles(e.dataTransfer.files);
+    };
+
+    const handleSubmit = async () => {
+        setFormError(null);
+
+        if (!subject.trim()) { setFormError("Konu başlığı zorunludur."); return; }
+        if (!description.trim()) { setFormError("Açıklama zorunludur."); return; }
+        if (activeTab === "DESTEK" && !errorType) { setFormError("Hata kategorisi seçiniz."); return; }
+
+        const successfulUrls = uploadingFiles.filter((f) => f.url && !f.error).map((f) => f.url!);
 
         setSubmitting(true);
         try {
             const res = await fetch("/api/tickets", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ errorType, subject: subject.trim(), description: description.trim(), imageUrl }),
+                body: JSON.stringify({
+                    type: activeTab,
+                    errorType: errorType || "GENEL",
+                    subject: subject.trim(),
+                    description: description.trim(),
+                    imageUrls: successfulUrls,
+                }),
             });
 
             if (!res.ok) {
                 const data = await res.json();
-                setError(data.error ?? "Bir hata oluştu.");
+                setFormError(data.error ?? "Bir hata oluştu.");
                 return;
             }
 
-            setSuccess(true);
-            setErrorType("");
-            setSubject("");
-            setDescription("");
-            setImageUrl(null);
-            await fetchTickets();
-            setTimeout(() => {
-                setSuccess(false);
-                setView("list");
-            }, 2000);
+            setSuccess(
+                activeTab === "DESTEK"
+                    ? "Destek talebiniz başarıyla gönderildi."
+                    : "Öneriniz başarıyla gönderildi."
+            );
+            resetForm();
+            await loadTickets();
+            setTimeout(() => { setView("list"); setSuccess(null); }, 2000);
         } catch {
-            setError("Ticket gönderilemedi. Lütfen tekrar deneyin.");
+            setFormError("Bir hata oluştu. Lütfen tekrar deneyin.");
         } finally {
             setSubmitting(false);
         }
     };
 
+    const getImageUrls = (ticket: Ticket): string[] => {
+        if (!ticket.imageUrls) return [];
+        try { return JSON.parse(ticket.imageUrls) as string[]; }
+        catch { return []; }
+    };
+
+    const getErrorLabel = (ticket: Ticket) => {
+        const list = ticket.type === "ONERI" ? SUGGESTION_TYPES : SUPPORT_ERROR_TYPES;
+        return list.find((t) => t.value === ticket.errorType)?.label ?? ticket.errorType;
+    };
+
+    const uploadedCount = uploadingFiles.filter((f) => f.url && !f.error).length;
+    const isUploading = uploadingFiles.some((f) => !f.url && !f.error);
+
     return (
-        <div className="max-w-2xl mx-auto space-y-4">
-            {/* Header */}
-            <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden">
-                <div className="relative px-6 py-5 overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-zinc-900 dark:via-zinc-900 dark:to-blue-950/10 pointer-events-none" />
-                    <div className="relative flex items-center justify-between">
-                        <div>
-                            <h1 className="text-lg font-black text-zinc-900 dark:text-white">Destek & İletişim</h1>
-                            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">Yaşadığın sorunları bizimle paylaş, en kısa sürede yanıtlayalım.</p>
-                        </div>
-                        <div className="flex gap-2">
-                            <button
-                                onClick={() => setView("list")}
-                                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${view === "list" ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700"}`}
-                            >
-                                Taleplerim ({tickets.length})
-                            </button>
-                            <button
-                                onClick={() => setView("new")}
-                                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${view === "new" ? "bg-blue-600 text-white" : "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40"}`}
-                            >
-                                + Yeni Talep
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* Yeni Ticket Formu */}
-            {view === "new" && (
-                <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden">
-                    <div className="px-6 py-4 border-b border-zinc-100 dark:border-zinc-800">
-                        <h2 className="text-sm font-black text-zinc-900 dark:text-white">Yeni Destek Talebi</h2>
-                        <p className="text-[11px] text-zinc-400 mt-0.5">Sorununuzu detaylı açıklarsanız daha hızlı çözüm sunabiliriz.</p>
-                    </div>
-
-                    <form onSubmit={handleSubmit} className="p-6 space-y-4">
-                        {/* Hata Konusu */}
-                        <div>
-                            <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1.5">
-                                Hata Konusu <span className="text-red-500">*</span>
-                            </label>
-                            <div className="relative">
-                                <select
-                                    value={errorType}
-                                    onChange={(e) => setErrorType(e.target.value)}
-                                    className="w-full appearance-none px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-sm text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 transition-all"
-                                    required
-                                >
-                                    <option value="">Konu seçin...</option>
-                                    {ERROR_TYPES.map((t) => (
-                                        <option key={t.value} value={t.value}>{t.label}</option>
-                                    ))}
-                                </select>
-                                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" />
-                            </div>
-                        </div>
-
-                        {/* Konu Başlığı */}
-                        <div>
-                            <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1.5">
-                                Konu Başlığı <span className="text-red-500">*</span>
-                            </label>
-                            <input
-                                type="text"
-                                value={subject}
-                                onChange={(e) => setSubject(e.target.value)}
-                                maxLength={200}
-                                placeholder="Sorununuzu kısaca özetleyin..."
-                                className="w-full px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-sm text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 transition-all"
-                                required
-                            />
-                            <p className="text-[10px] text-zinc-400 mt-1 text-right">{subject.length}/200</p>
-                        </div>
-
-                        {/* Açıklama */}
-                        <div>
-                            <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1.5">
-                                Açıklama <span className="text-red-500">*</span>
-                            </label>
-                            <textarea
-                                value={description}
-                                onChange={(e) => setDescription(e.target.value)}
-                                placeholder="Sorununuzu detaylı açıklayın. Ne zaman oldu, ne yaptınız, ne bekliyordunuz?"
-                                rows={5}
-                                className="w-full px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-sm text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 transition-all resize-none"
-                                required
-                            />
-                        </div>
-
-                        {/* Görsel Yükleme */}
-                        <div>
-                            <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1.5">
-                                Ekran Görüntüsü (İsteğe Bağlı)
-                            </label>
-
-                            {imageUrl ? (
-                                <div className="flex items-center gap-3 p-3 rounded-xl border border-emerald-200 dark:border-emerald-700/40 bg-emerald-50 dark:bg-emerald-900/10">
-                                    <ImageIcon className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                                    <span className="text-xs text-emerald-700 dark:text-emerald-400 flex-1 truncate">Görsel yüklendi</span>
-                                    <button
-                                        type="button"
-                                        onClick={() => setImageUrl(null)}
-                                        className="p-1 rounded-lg hover:bg-emerald-100 dark:hover:bg-emerald-900/30 text-emerald-600 transition-colors"
-                                    >
-                                        <X className="w-3.5 h-3.5" />
-                                    </button>
-                                </div>
-                            ) : (
-                                <button
-                                    type="button"
-                                    onClick={() => fileRef.current?.click()}
-                                    disabled={uploading}
-                                    className="w-full flex flex-col items-center justify-center gap-2 py-6 rounded-xl border-2 border-dashed border-zinc-200 dark:border-zinc-700 hover:border-blue-400 dark:hover:border-blue-500 text-zinc-400 hover:text-blue-500 transition-all bg-zinc-50 dark:bg-zinc-800/50 hover:bg-blue-50/50 dark:hover:bg-blue-900/10"
-                                >
-                                    {uploading ? (
-                                        <div className="w-5 h-5 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
-                                    ) : (
-                                        <Upload className="w-5 h-5" />
-                                    )}
-                                    <span className="text-xs font-medium">
-                                        {uploading ? "Yükleniyor..." : "Görsel eklemek için tıklayın"}
-                                    </span>
-                                    <span className="text-[10px]">PNG, JPG, WEBP — Max 10MB</span>
-                                </button>
-                            )}
-                            <input
-                                ref={fileRef}
-                                type="file"
-                                accept="image/*"
-                                className="hidden"
-                                onChange={(e) => { const f = e.target.files?.[0]; if (f) handleImageUpload(f); }}
-                            />
-                        </div>
-
-                        {/* Hata mesajı */}
-                        {error && (
-                            <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700/40">
-                                <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
-                                <p className="text-xs text-red-600 dark:text-red-400">{error}</p>
-                            </div>
-                        )}
-
-                        {/* Başarı mesajı */}
-                        {success && (
-                            <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700/40">
-                                <CheckCircle className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                                <p className="text-xs text-emerald-600 dark:text-emerald-400 font-bold">Talebiniz başarıyla iletildi!</p>
-                            </div>
-                        )}
-
-                        <div className="flex gap-3 pt-1">
-                            <button
-                                type="button"
-                                onClick={() => setView("list")}
-                                className="flex-1 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-sm font-bold text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all"
-                            >
-                                İptal
-                            </button>
-                            <button
-                                type="submit"
-                                disabled={submitting || uploading}
-                                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold transition-all disabled:opacity-60 shadow-sm"
-                            >
-                                {submitting ? (
-                                    <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                                ) : (
-                                    <Send className="w-4 h-4" />
-                                )}
-                                {submitting ? "Gönderiliyor..." : "Gönder"}
-                            </button>
-                        </div>
-                    </form>
+        <>
+            {/* Lightbox */}
+            {lightboxUrl && (
+                <div
+                    className="fixed inset-0 z-[500] bg-black/90 flex items-center justify-center"
+                    onClick={() => setLightboxUrl(null)}
+                >
+                    <button
+                        className="absolute top-4 right-4 text-white/70 hover:text-white transition"
+                        onClick={() => setLightboxUrl(null)}
+                    >
+                        <X className="w-8 h-8" />
+                    </button>
+                    <img
+                        src={lightboxUrl}
+                        alt="Büyük görünüm"
+                        className="max-w-[90vw] max-h-[90vh] object-contain rounded-xl"
+                        onClick={(e) => e.stopPropagation()}
+                    />
                 </div>
             )}
 
-            {/* Ticket Listesi */}
-            {view === "list" && (
-                <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden">
-                    <div className="px-5 py-4 border-b border-zinc-100 dark:border-zinc-800">
-                        <h2 className="text-sm font-black text-zinc-900 dark:text-white">Taleplerim</h2>
-                    </div>
+            <div className="w-full max-w-4xl mx-auto">
+                {/* Sayfa Başlığı */}
+                <div className="mb-6">
+                    <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
+                        Destek & İletişim
+                    </h1>
+                    <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
+                        Sorunlarınızı bildirin veya önerilerinizi paylaşın
+                    </p>
+                </div>
 
-                    {loadingTickets ? (
-                        <div className="p-8 flex justify-center">
-                            <div className="w-6 h-6 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
-                        </div>
-                    ) : tickets.length === 0 ? (
-                        <div className="flex flex-col items-center py-12 px-5 text-center">
-                            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-blue-900/30 dark:to-indigo-900/30 flex items-center justify-center mb-3">
-                                <FileText className="w-7 h-7 text-blue-400" />
-                            </div>
-                            <p className="text-sm font-bold text-zinc-600 dark:text-zinc-400 mb-1">Henüz destek talebi yok</p>
-                            <p className="text-[11px] text-zinc-400 mb-4">Bir sorun yaşadığında yeni talep oluşturabilirsin.</p>
+                {/* Üst Sekme + Yeni Buton */}
+                <div className="flex items-center gap-3 mb-6 flex-wrap">
+                    <button
+                        onClick={() => { setActiveTab("DESTEK"); setView("list"); resetForm(); }}
+                        className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all border ${
+                            activeTab === "DESTEK"
+                                ? "bg-red-600 text-white border-red-600 shadow-lg shadow-red-600/20"
+                                : "bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-700 hover:border-red-300"
+                        }`}
+                    >
+                        <Wrench className="w-4 h-4" />
+                        Destek Talebi
+                        {tickets.filter((t) => t.type === "DESTEK").length > 0 && (
+                            <span className={`text-xs px-1.5 py-0.5 rounded-full ${
+                                activeTab === "DESTEK" ? "bg-white/20 text-white" : "bg-zinc-100 dark:bg-zinc-700 text-zinc-500"
+                            }`}>
+                                {tickets.filter((t) => t.type === "DESTEK").length}
+                            </span>
+                        )}
+                    </button>
+
+                    <button
+                        onClick={() => { setActiveTab("ONERI"); setView("list"); resetForm(); }}
+                        className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all border ${
+                            activeTab === "ONERI"
+                                ? "bg-amber-500 text-white border-amber-500 shadow-lg shadow-amber-500/20"
+                                : "bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-700 hover:border-amber-300"
+                        }`}
+                    >
+                        <Lightbulb className="w-4 h-4" />
+                        Öneri Gönder
+                        {tickets.filter((t) => t.type === "ONERI").length > 0 && (
+                            <span className={`text-xs px-1.5 py-0.5 rounded-full ${
+                                activeTab === "ONERI" ? "bg-white/20 text-white" : "bg-zinc-100 dark:bg-zinc-700 text-zinc-500"
+                            }`}>
+                                {tickets.filter((t) => t.type === "ONERI").length}
+                            </span>
+                        )}
+                    </button>
+
+                    <div className="ml-auto">
+                        {view === "list" ? (
                             <button
-                                onClick={() => setView("new")}
-                                className="px-4 py-2 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-xs font-bold hover:opacity-90 transition-opacity shadow-sm"
+                                onClick={() => { resetForm(); setView("new"); }}
+                                className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all border ${
+                                    activeTab === "DESTEK"
+                                        ? "bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800 hover:bg-red-100"
+                                        : "bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800 hover:bg-amber-100"
+                                }`}
                             >
-                                İlk Talebi Oluştur
+                                <Plus className="w-4 h-4" />
+                                {activeTab === "DESTEK" ? "Yeni Talep" : "Öneri Yaz"}
                             </button>
+                        ) : (
+                            <button
+                                onClick={() => { setView("list"); resetForm(); }}
+                                className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 border border-zinc-200 dark:border-zinc-700 transition-all"
+                            >
+                                <ChevronDown className="w-4 h-4 rotate-90" />
+                                Listeye Dön
+                            </button>
+                        )}
+                    </div>
+                </div>
+
+                {/* ===== FORM GÖRÜNÜMÜ ===== */}
+                {view === "new" && (
+                    <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-700 shadow-sm overflow-hidden">
+                        {/* Form Header */}
+                        <div className={`px-6 py-4 border-b border-zinc-100 dark:border-zinc-800 ${
+                            activeTab === "DESTEK"
+                                ? "bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/10"
+                                : "bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/10"
+                        }`}>
+                            <div className="flex items-center gap-3">
+                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                                    activeTab === "DESTEK" ? "bg-red-100 dark:bg-red-900/40" : "bg-amber-100 dark:bg-amber-900/40"
+                                }`}>
+                                    {activeTab === "DESTEK"
+                                        ? <Wrench className="w-5 h-5 text-red-600 dark:text-red-400" />
+                                        : <Lightbulb className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                                    }
+                                </div>
+                                <div>
+                                    <h2 className="font-semibold text-zinc-900 dark:text-zinc-100">
+                                        {activeTab === "DESTEK" ? "Destek Talebi Oluştur" : "Öneri Gönder"}
+                                    </h2>
+                                    <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                                        {activeTab === "DESTEK"
+                                            ? "Yaşadığınız sorunu detaylı açıklayın, en kısa sürede yanıtlanacak"
+                                            : "Sistemi geliştirmemize yardımcı olun"
+                                        }
+                                    </p>
+                                </div>
+                            </div>
                         </div>
-                    ) : (
-                        <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
-                            {tickets.map((ticket) => {
-                                const statusInfo = STATUS_LABELS[ticket.status] ?? STATUS_LABELS.OPEN;
+
+                        <div className="p-6 space-y-5">
+                            {/* Kategori */}
+                            <div>
+                                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">
+                                    {activeTab === "DESTEK" ? "Hata Kategorisi" : "Öneri Kategorisi"}
+                                    {activeTab === "DESTEK" && <span className="text-red-500 ml-1">*</span>}
+                                </label>
+                                <select
+                                    value={errorType}
+                                    onChange={(e) => setErrorType(e.target.value)}
+                                    className="w-full px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 text-sm focus:outline-none focus:ring-2 focus:ring-red-400 dark:focus:ring-red-600 transition"
+                                >
+                                    <option value="">— Kategori seçin —</option>
+                                    {(activeTab === "DESTEK" ? SUPPORT_ERROR_TYPES : SUGGESTION_TYPES).map((t) => (
+                                        <option key={t.value} value={t.value}>{t.label}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {/* Konu */}
+                            <div>
+                                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">
+                                    Konu Başlığı <span className="text-red-500">*</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    value={subject}
+                                    onChange={(e) => setSubject(e.target.value)}
+                                    maxLength={200}
+                                    placeholder={activeTab === "DESTEK" ? "Sorunu kısaca özetleyin" : "Önerinizi kısaca özetleyin"}
+                                    className="w-full px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 text-sm focus:outline-none focus:ring-2 focus:ring-red-400 dark:focus:ring-red-600 transition placeholder:text-zinc-400"
+                                />
+                                <p className="text-xs text-zinc-400 mt-1 text-right">{subject.length}/200</p>
+                            </div>
+
+                            {/* Açıklama */}
+                            <div>
+                                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">
+                                    Açıklama <span className="text-red-500">*</span>
+                                </label>
+                                <textarea
+                                    value={description}
+                                    onChange={(e) => setDescription(e.target.value)}
+                                    rows={5}
+                                    placeholder={
+                                        activeTab === "DESTEK"
+                                            ? "Sorunu detaylı açıklayın. Ne zaman oluştu, hangi adımları izlediniz, ne görmeyi bekliyordunuz?"
+                                            : "Önerinizi detaylı açıklayın. Bu değişiklik nasıl bir fayda sağlar?"
+                                    }
+                                    className="w-full px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 text-sm focus:outline-none focus:ring-2 focus:ring-red-400 dark:focus:ring-red-600 transition placeholder:text-zinc-400 resize-none"
+                                />
+                            </div>
+
+                            {/* Fotoğraf Yükleme */}
+                            <div>
+                                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">
+                                    Görsel Ekle
+                                    <span className="text-zinc-400 font-normal ml-2">
+                                        (opsiyonel · max {MAX_IMAGES} görsel · toplam {MAX_TOTAL_MB}MB)
+                                    </span>
+                                </label>
+
+                                {uploadedCount < MAX_IMAGES && (
+                                    <div
+                                        onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                                        onDragLeave={() => setIsDragging(false)}
+                                        onDrop={handleDrop}
+                                        onClick={() => fileInputRef.current?.click()}
+                                        className={`relative flex flex-col items-center justify-center gap-2 px-6 py-8 rounded-xl border-2 border-dashed cursor-pointer transition-all ${
+                                            isDragging
+                                                ? "border-red-400 bg-red-50 dark:bg-red-900/20 scale-[1.02]"
+                                                : "border-zinc-300 dark:border-zinc-600 bg-zinc-50 dark:bg-zinc-800/50 hover:border-red-300 hover:bg-red-50/30 dark:hover:bg-red-900/10"
+                                        }`}
+                                    >
+                                        <div className="w-12 h-12 rounded-full bg-zinc-100 dark:bg-zinc-700 flex items-center justify-center">
+                                            <Upload className="w-5 h-5 text-zinc-400" />
+                                        </div>
+                                        <div className="text-center">
+                                            <p className="text-sm font-medium text-zinc-600 dark:text-zinc-400">
+                                                Görsel sürükleyin veya <span className="text-red-500">tıklayın</span>
+                                            </p>
+                                            <p className="text-xs text-zinc-400 mt-0.5">
+                                                JPG, PNG, GIF, WEBP · Kalan: {MAX_IMAGES - uploadedCount} görsel
+                                            </p>
+                                        </div>
+                                        <input
+                                            ref={fileInputRef}
+                                            type="file"
+                                            accept="image/*"
+                                            multiple
+                                            className="hidden"
+                                            onChange={(e) => e.target.files && handleFiles(e.target.files)}
+                                        />
+                                    </div>
+                                )}
+
+                                {uploadingFiles.length > 0 && (
+                                    <div className="grid grid-cols-3 sm:grid-cols-5 gap-3 mt-3">
+                                        {uploadingFiles.map((file) => (
+                                            <div
+                                                key={file.id}
+                                                className="relative aspect-square rounded-xl overflow-hidden border border-zinc-200 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 group"
+                                            >
+                                                {file.preview && (
+                                                    <img
+                                                        src={file.preview}
+                                                        alt={file.name}
+                                                        className="w-full h-full object-cover"
+                                                    />
+                                                )}
+
+                                                {!file.url && !file.error && (
+                                                    <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center gap-1">
+                                                        <Loader2 className="w-5 h-5 text-white animate-spin" />
+                                                        <div className="w-3/4 h-1 bg-white/20 rounded-full overflow-hidden">
+                                                            <div
+                                                                className="h-full bg-white rounded-full transition-all duration-300"
+                                                                style={{ width: `${file.progress}%` }}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {file.error && (
+                                                    <div className="absolute inset-0 bg-red-900/70 flex items-center justify-center">
+                                                        <AlertCircle className="w-5 h-5 text-red-300" />
+                                                    </div>
+                                                )}
+
+                                                {file.url && (
+                                                    <div className="absolute top-1 left-1 w-5 h-5 bg-emerald-500 rounded-full flex items-center justify-center">
+                                                        <CheckCircle className="w-3.5 h-3.5 text-white" />
+                                                    </div>
+                                                )}
+
+                                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
+                                                    {file.url && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setLightboxUrl(file.url!)}
+                                                            className="w-7 h-7 bg-white/90 rounded-lg flex items-center justify-center hover:bg-white"
+                                                        >
+                                                            <Maximize2 className="w-3.5 h-3.5 text-zinc-700" />
+                                                        </button>
+                                                    )}
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => removeFile(file.id)}
+                                                        className="w-7 h-7 bg-red-500/90 rounded-lg flex items-center justify-center hover:bg-red-500"
+                                                    >
+                                                        <X className="w-3.5 h-3.5 text-white" />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Hata / Başarı mesajları */}
+                            {formError && (
+                                <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-sm text-red-600 dark:text-red-400">
+                                    <AlertCircle className="w-4 h-4 shrink-0" />
+                                    {formError}
+                                </div>
+                            )}
+                            {success && (
+                                <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 text-sm text-emerald-600 dark:text-emerald-400">
+                                    <CheckCircle className="w-4 h-4 shrink-0" />
+                                    {success}
+                                </div>
+                            )}
+
+                            {/* Butonlar */}
+                            <div className="flex gap-3 pt-1">
+                                <button
+                                    onClick={() => { setView("list"); resetForm(); }}
+                                    className="flex-1 px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition"
+                                >
+                                    İptal
+                                </button>
+                                <button
+                                    onClick={handleSubmit}
+                                    disabled={submitting || isUploading}
+                                    className={`flex-[2] flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white transition shadow-sm disabled:opacity-60 disabled:cursor-not-allowed ${
+                                        activeTab === "DESTEK"
+                                            ? "bg-red-600 hover:bg-red-700 shadow-red-600/20"
+                                            : "bg-amber-500 hover:bg-amber-600 shadow-amber-500/20"
+                                    }`}
+                                >
+                                    {submitting ? (
+                                        <><Loader2 className="w-4 h-4 animate-spin" /> Gönderiliyor...</>
+                                    ) : isUploading ? (
+                                        <><Loader2 className="w-4 h-4 animate-spin" /> Görseller yükleniyor...</>
+                                    ) : (
+                                        <><Send className="w-4 h-4" /> {activeTab === "DESTEK" ? "Talebi Gönder" : "Öneriyi Gönder"}</>
+                                    )}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* ===== LİSTE GÖRÜNÜMÜ ===== */}
+                {view === "list" && (
+                    <div className="space-y-3">
+                        {loadingTickets ? (
+                            <div className="flex items-center justify-center py-16 text-zinc-400">
+                                <Loader2 className="w-6 h-6 animate-spin mr-2" />
+                                <span className="text-sm">Yükleniyor...</span>
+                            </div>
+                        ) : filteredTickets.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-16 text-center bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-700">
+                                <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-4 ${
+                                    activeTab === "DESTEK" ? "bg-red-50 dark:bg-red-900/20" : "bg-amber-50 dark:bg-amber-900/20"
+                                }`}>
+                                    {activeTab === "DESTEK"
+                                        ? <Wrench className="w-8 h-8 text-red-300 dark:text-red-600" />
+                                        : <Lightbulb className="w-8 h-8 text-amber-300 dark:text-amber-600" />
+                                    }
+                                </div>
+                                <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">
+                                    {activeTab === "DESTEK" ? "Henüz destek talebiniz yok" : "Henüz öneri göndermediniz"}
+                                </p>
+                                <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">
+                                    Yukarıdaki butona tıklayarak {activeTab === "DESTEK" ? "talebinizi" : "önerinizi"} iletebilirsiniz
+                                </p>
+                            </div>
+                        ) : (
+                            filteredTickets.map((ticket) => {
+                                const images = getImageUrls(ticket);
+                                const statusCfg = STATUS_CONFIG[ticket.status as keyof typeof STATUS_CONFIG] ?? STATUS_CONFIG.OPEN;
+                                const StatusIcon = statusCfg.icon;
                                 const isExpanded = expandedTicket === ticket.id;
-                                const errorLabel = ERROR_TYPES.find((t) => t.value === ticket.errorType)?.label ?? ticket.errorType;
 
                                 return (
-                                    <div key={ticket.id} className="overflow-hidden">
+                                    <div
+                                        key={ticket.id}
+                                        className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-700 shadow-sm overflow-hidden"
+                                    >
                                         <button
-                                            className="w-full flex items-start gap-3 px-5 py-4 text-left hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors"
                                             onClick={() => setExpandedTicket(isExpanded ? null : ticket.id)}
+                                            className="w-full flex items-start gap-4 p-5 text-left hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition"
                                         >
-                                            <div className={`mt-0.5 flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold flex-shrink-0 ${statusInfo.color} ${statusInfo.bg}`}>
-                                                {statusInfo.icon}
-                                                {statusInfo.label}
+                                            <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
+                                                ticket.type === "DESTEK" ? "bg-red-50 dark:bg-red-900/20" : "bg-amber-50 dark:bg-amber-900/20"
+                                            }`}>
+                                                {ticket.type === "DESTEK"
+                                                    ? <Wrench className="w-4 h-4 text-red-500 dark:text-red-400" />
+                                                    : <Lightbulb className="w-4 h-4 text-amber-500 dark:text-amber-400" />
+                                                }
                                             </div>
+
                                             <div className="flex-1 min-w-0">
-                                                <div className="flex items-center gap-2 flex-wrap">
-                                                    <span className="text-xs font-black text-zinc-800 dark:text-zinc-100 truncate">{ticket.subject}</span>
-                                                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-500">{errorLabel}</span>
+                                                <div className="flex items-start justify-between gap-3">
+                                                    <div className="min-w-0">
+                                                        <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 truncate">
+                                                            {ticket.subject}
+                                                        </p>
+                                                        <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                                            <span className="text-xs text-zinc-400">{getErrorLabel(ticket)}</span>
+                                                            {images.length > 0 && (
+                                                                <span className="flex items-center gap-1 text-xs text-zinc-400">
+                                                                    <FileImage className="w-3 h-3" />
+                                                                    {images.length} görsel
+                                                                </span>
+                                                            )}
+                                                            {ticket.adminNote && (
+                                                                <span className="flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+                                                                    <MessageSquare className="w-3 h-3" />
+                                                                    Yanıt var
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-2 shrink-0">
+                                                        <span className={`flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full ${statusCfg.color}`}>
+                                                            <StatusIcon className="w-3 h-3" />
+                                                            {statusCfg.label}
+                                                        </span>
+                                                        {isExpanded
+                                                            ? <ChevronUp className="w-4 h-4 text-zinc-400" />
+                                                            : <ChevronDown className="w-4 h-4 text-zinc-400" />
+                                                        }
+                                                    </div>
                                                 </div>
-                                                <p className="text-[10px] text-zinc-400 mt-0.5">
-                                                    {new Date(ticket.createdAt).toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" })}
+                                                <p className="text-xs text-zinc-400 mt-1.5">
+                                                    {new Date(ticket.createdAt).toLocaleDateString("tr-TR", {
+                                                        day: "numeric", month: "long", year: "numeric",
+                                                        hour: "2-digit", minute: "2-digit"
+                                                    })}
                                                 </p>
                                             </div>
-                                            <ChevronDown className={`w-4 h-4 text-zinc-400 flex-shrink-0 transition-transform ${isExpanded ? "rotate-180" : ""}`} />
                                         </button>
 
                                         {isExpanded && (
-                                            <div className="px-5 pb-4 space-y-3 bg-zinc-50/50 dark:bg-zinc-800/20">
-                                                <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-100 dark:border-zinc-800 p-4">
-                                                    <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-wide mb-1.5">Açıklama</p>
-                                                    <p className="text-xs text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap leading-relaxed">{ticket.description}</p>
+                                            <div className="border-t border-zinc-100 dark:border-zinc-800 px-5 pb-5 pt-4 space-y-4">
+                                                <div>
+                                                    <p className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide mb-2">Açıklama</p>
+                                                    <p className="text-sm text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap leading-relaxed">
+                                                        {ticket.description}
+                                                    </p>
                                                 </div>
 
-                                                {ticket.imageUrl && (
-                                                    <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-100 dark:border-zinc-800 p-4">
-                                                        <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-wide mb-2">Ekran Görüntüsü</p>
-                                                        <img
-                                                            src={`/api/upload/blob?key=${ticket.imageUrl}`}
-                                                            alt="Ticket görseli"
-                                                            className="max-w-full rounded-lg border border-zinc-100 dark:border-zinc-800"
-                                                        />
+                                                {images.length > 0 && (
+                                                    <div>
+                                                        <p className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide mb-2">
+                                                            Eklenen Görseller ({images.length})
+                                                        </p>
+                                                        <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+                                                            {images.map((url, i) => (
+                                                                <button
+                                                                    key={i}
+                                                                    type="button"
+                                                                    onClick={() => setLightboxUrl(url)}
+                                                                    className="aspect-square rounded-xl overflow-hidden border border-zinc-200 dark:border-zinc-700 hover:scale-105 transition group relative"
+                                                                >
+                                                                    <img src={url} alt={`Görsel ${i + 1}`} className="w-full h-full object-cover" />
+                                                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition flex items-center justify-center">
+                                                                        <Eye className="w-4 h-4 text-white opacity-0 group-hover:opacity-100 transition" />
+                                                                    </div>
+                                                                </button>
+                                                            ))}
+                                                        </div>
                                                     </div>
                                                 )}
 
                                                 {ticket.adminNote && (
-                                                    <div className="bg-blue-50 dark:bg-blue-900/10 rounded-xl border border-blue-200 dark:border-blue-700/30 p-4">
-                                                        <p className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wide mb-1.5">Admin Yanıtı</p>
-                                                        <p className="text-xs text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap leading-relaxed">{ticket.adminNote}</p>
+                                                    <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-xl p-4">
+                                                        <div className="flex items-center gap-2 mb-2">
+                                                            <div className="w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center">
+                                                                <MessageSquare className="w-3.5 h-3.5 text-white" />
+                                                            </div>
+                                                            <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 uppercase tracking-wide">
+                                                                Yönetici Yanıtı
+                                                            </p>
+                                                        </div>
+                                                        <p className="text-sm text-emerald-800 dark:text-emerald-300 whitespace-pre-wrap leading-relaxed">
+                                                            {ticket.adminNote}
+                                                        </p>
                                                     </div>
                                                 )}
                                             </div>
                                         )}
                                     </div>
                                 );
-                            })}
-                        </div>
-                    )}
-                </div>
-            )}
-        </div>
+                            })
+                        )}
+                    </div>
+                )}
+            </div>
+        </>
     );
 }

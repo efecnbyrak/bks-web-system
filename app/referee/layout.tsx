@@ -12,6 +12,7 @@ import { MandatoryAnnouncementModal } from "@/components/announcements/Mandatory
 import { UpcomingMatchPopup } from "@/components/matches/UpcomingMatchPopup";
 import { PenaltyLoginPopup } from "@/components/referee/PenaltyLoginPopup";
 import { AssignmentNotificationPopup } from "@/components/assignments/AssignmentNotificationPopup";
+import { TicketReplyPopup } from "@/components/tickets/TicketReplyPopup";
 
 export default async function RefereeLayout({
     children,
@@ -82,6 +83,7 @@ export default async function RefereeLayout({
                 <PenaltyLoginPopup />
                 <UpcomingMatchPopup />
                 <AssignmentNotificationPopup />
+                <TicketReplyPopup />
 
                 {/* Dashboard Footer */}
                 <footer className="p-6 border-t border-zinc-200 dark:border-zinc-800 text-center text-zinc-500 text-xs mt-auto">

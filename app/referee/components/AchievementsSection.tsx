@@ -654,8 +654,109 @@ export function AchievementsSection() {
 
                     <div className="border-t border-zinc-100 dark:border-zinc-800" />
 
-                    {/* Tier Filtreleri */}
-                    <div className="px-5 pt-4 pb-2 flex gap-2 overflow-x-auto modern-scrollbar">
+                    {/* ===== YATAY SCROLL ROADMAP ===== */}
+                    <div className="px-5 pt-5 pb-3">
+                        <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-3">İlerleme Haritası</p>
+                        <div className="relative overflow-x-auto modern-scrollbar pb-2">
+                            <div className="flex items-center min-w-max gap-0">
+                                {tiers.map((tier, tierIdx) => {
+                                    const tierAchievements = achievements.filter((a) => a.tier === tier);
+                                    const tierEarned = tierAchievements.filter((a) => a.condition(data));
+                                    const tierPct = tierAchievements.length > 0 ? Math.round((tierEarned.length / tierAchievements.length) * 100) : 0;
+                                    const isActive = activeTab === tier;
+                                    const isComplete = tierPct === 100;
+
+                                    // Her tier için gradient rengini belirle
+                                    const tierColors: Record<string, { from: string; to: string; dot: string; label: string }> = {
+                                        baslangic: { from: "from-zinc-400", to: "to-zinc-500", dot: "bg-zinc-400", label: "text-zinc-500" },
+                                        gelisim: { from: "from-amber-500", to: "to-orange-400", dot: "bg-amber-500", label: "text-amber-600" },
+                                        orta: { from: "from-blue-500", to: "to-cyan-400", dot: "bg-blue-500", label: "text-blue-600" },
+                                        ileri: { from: "from-teal-500", to: "to-emerald-400", dot: "bg-teal-500", label: "text-teal-600" },
+                                        uzman: { from: "from-violet-500", to: "to-purple-400", dot: "bg-violet-500", label: "text-violet-600" },
+                                        master: { from: "from-rose-500", to: "to-pink-400", dot: "bg-rose-500", label: "text-rose-600" },
+                                        legend: { from: "from-rose-500", to: "to-amber-400", dot: "bg-rose-500", label: "text-rose-500" },
+                                    };
+                                    const col = tierColors[tier] ?? tierColors.baslangic;
+
+                                    return (
+                                        <div key={tier} className="flex items-center">
+                                            {/* Tier Düğümü */}
+                                            <button
+                                                onClick={() => setActiveTab(isActive ? "all" : tier)}
+                                                className="flex flex-col items-center gap-1.5 group"
+                                                style={{ minWidth: 80 }}
+                                            >
+                                                {/* Mini rozet dots (üst — ilk 3) */}
+                                                <div className="flex gap-1 h-5 items-end justify-center">
+                                                    {tierAchievements.slice(0, 3).map((a, i) => {
+                                                        const isEarned = a.condition(data);
+                                                        return (
+                                                            <div
+                                                                key={i}
+                                                                className={`rounded-full transition-all ${isEarned ? `${col.dot} shadow-sm` : "bg-zinc-200 dark:bg-zinc-700"}`}
+                                                                style={{ width: 6, height: 6 + i * 2 }}
+                                                            />
+                                                        );
+                                                    })}
+                                                </div>
+
+                                                {/* Ana Tier Düğümü */}
+                                                <div className={`relative w-14 h-14 rounded-2xl flex flex-col items-center justify-center transition-all duration-300 border-2 ${
+                                                    isActive
+                                                        ? `bg-gradient-to-br ${col.from} ${col.to} border-transparent shadow-lg scale-110`
+                                                        : isComplete
+                                                        ? `bg-gradient-to-br ${col.from} ${col.to} border-transparent shadow-md opacity-90`
+                                                        : "bg-zinc-100 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 group-hover:border-zinc-300"
+                                                }`}>
+                                                    {isComplete && (
+                                                        <CheckCircle className={`w-4 h-4 mb-0.5 ${isActive ? "text-white" : "text-white"}`} />
+                                                    )}
+                                                    <span className={`text-[9px] font-black leading-none ${isActive || isComplete ? "text-white" : "text-zinc-500 dark:text-zinc-400"}`}>
+                                                        {tierEarned.length}/{tierAchievements.length}
+                                                    </span>
+                                                    <div className={`text-[8px] font-semibold mt-0.5 ${isActive || isComplete ? "text-white/80" : "text-zinc-400"}`}>
+                                                        {tierPct}%
+                                                    </div>
+                                                </div>
+
+                                                {/* Tier İsmi */}
+                                                <span className={`text-[9px] font-black text-center leading-tight max-w-[72px] ${isActive ? col.label : "text-zinc-400"}`}>
+                                                    {TIER_LABELS[tier]}
+                                                </span>
+
+                                                {/* Mini rozet dots (alt — kalan) */}
+                                                <div className="flex gap-1 h-5 items-start justify-center">
+                                                    {tierAchievements.slice(3, 6).map((a, i) => {
+                                                        const isEarned = a.condition(data);
+                                                        return (
+                                                            <div
+                                                                key={i}
+                                                                className={`rounded-full transition-all ${isEarned ? `${col.dot} shadow-sm` : "bg-zinc-200 dark:bg-zinc-700"}`}
+                                                                style={{ width: 6, height: 6 + (2 - i) * 2 }}
+                                                            />
+                                                        );
+                                                    })}
+                                                </div>
+                                            </button>
+
+                                            {/* Bağlantı Çizgisi */}
+                                            {tierIdx < tiers.length - 1 && (
+                                                <div className="flex-1 h-1 mx-1 rounded-full overflow-hidden bg-zinc-200 dark:bg-zinc-700" style={{ minWidth: 24 }}>
+                                                    <div
+                                                        className={`h-full bg-gradient-to-r ${col.from} ${col.to} rounded-full transition-all duration-700`}
+                                                        style={{ width: `${tierPct}%` }}
+                                                    />
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Sekme Filtreleri (kompakt) */}
+                    <div className="px-5 pb-2 flex gap-2 overflow-x-auto modern-scrollbar">
                         <button
                             onClick={() => setActiveTab("all")}
                             className={`flex-shrink-0 px-3 py-1 rounded-full text-[10px] font-black transition-all ${activeTab === "all" ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700"}`}
