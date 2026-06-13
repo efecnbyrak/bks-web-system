@@ -1,8 +1,7 @@
 "use client";
 
-import { X, Shield, Trophy, Crown, Gem, Star, Flame, Zap, Lock, Sparkles, Swords, Medal } from "lucide-react";
+import { X, Shield, Trophy, Gem, Star, Flame, Zap, Lock } from "lucide-react";
 
-// Her rank için büyük, renkli SVG ikon bileşenleri
 function RankIcon({ rank }: { rank: string }) {
     const size = "w-6 h-6";
     switch (rank) {
@@ -22,14 +21,8 @@ function RankIcon({ rank }: { rank: string }) {
             );
         case "Altın":
             return <Trophy className={`${size} text-amber-400`} style={{ filter: "drop-shadow(0 0 4px #fbbf24)" }} />;
-        case "Platin":
-            return <Crown className={`${size} text-teal-300`} style={{ filter: "drop-shadow(0 0 4px #2dd4bf)" }} />;
         case "Elmas":
             return <Gem className={`${size} text-sky-300`} style={{ filter: "drop-shadow(0 0 6px #38bdf8)" }} />;
-        case "Master":
-            return <Swords className={`${size} text-violet-300`} style={{ filter: "drop-shadow(0 0 6px #a78bfa)" }} />;
-        case "Legend":
-            return <Sparkles className={`${size} text-rose-300`} style={{ filter: "drop-shadow(0 0 8px #fb7185)" }} />;
         default:
             return <Star className={size} />;
     }
@@ -39,7 +32,7 @@ export const RANKS = [
     {
         name: "Başlangıç",
         minXP: 0,
-        maxXP: 100,
+        maxXP: 500,
         icon: <RankIcon rank="Başlangıç" />,
         gradient: "from-zinc-400 to-zinc-500",
         glowColor: "shadow-zinc-400/30",
@@ -50,8 +43,8 @@ export const RANKS = [
     },
     {
         name: "Bronz",
-        minXP: 100,
-        maxXP: 500,
+        minXP: 500,
+        maxXP: 1500,
         icon: <RankIcon rank="Bronz" />,
         gradient: "from-amber-800 to-amber-600",
         glowColor: "shadow-amber-700/40",
@@ -62,8 +55,8 @@ export const RANKS = [
     },
     {
         name: "Gümüş",
-        minXP: 500,
-        maxXP: 1500,
+        minXP: 1500,
+        maxXP: 3500,
         icon: <RankIcon rank="Gümüş" />,
         gradient: "from-zinc-300 to-zinc-400",
         glowColor: "shadow-zinc-300/40",
@@ -74,8 +67,8 @@ export const RANKS = [
     },
     {
         name: "Altın",
-        minXP: 1500,
-        maxXP: 4000,
+        minXP: 3500,
+        maxXP: 7000,
         icon: <RankIcon rank="Altın" />,
         gradient: "from-amber-400 to-yellow-300",
         glowColor: "shadow-amber-400/50",
@@ -85,21 +78,9 @@ export const RANKS = [
         description: "Sınav başarıları ve kural kitabında ilerleme kaydediyorsun",
     },
     {
-        name: "Platin",
-        minXP: 4000,
-        maxXP: 8000,
-        icon: <RankIcon rank="Platin" />,
-        gradient: "from-teal-400 to-cyan-300",
-        glowColor: "shadow-teal-400/50",
-        ring: "ring-teal-400/50",
-        textColor: "text-teal-500",
-        bgColor: "bg-teal-50 dark:bg-teal-900/20",
-        description: "Kural kitabının büyük bölümünü bitirdin, zorlu sınavlara hazırsın",
-    },
-    {
         name: "Elmas",
-        minXP: 8000,
-        maxXP: 15000,
+        minXP: 7000,
+        maxXP: Infinity,
         icon: <RankIcon rank="Elmas" />,
         gradient: "from-sky-400 to-indigo-400",
         glowColor: "shadow-sky-400/60",
@@ -107,30 +88,6 @@ export const RANKS = [
         textColor: "text-sky-500",
         bgColor: "bg-sky-50 dark:bg-sky-900/20",
         description: "Kural kitabını %100 tamamladın, tüm videoları izledin",
-    },
-    {
-        name: "Master",
-        minXP: 15000,
-        maxXP: 25000,
-        icon: <RankIcon rank="Master" />,
-        gradient: "from-violet-500 to-purple-400",
-        glowColor: "shadow-violet-500/50",
-        ring: "ring-violet-500/50",
-        textColor: "text-violet-500",
-        bgColor: "bg-violet-50 dark:bg-violet-900/20",
-        description: "25+ sınav, mükemmel skorlar, sistemin hakimisin",
-    },
-    {
-        name: "Legend",
-        minXP: 25000,
-        maxXP: Infinity,
-        icon: <RankIcon rank="Legend" />,
-        gradient: "from-rose-500 via-orange-400 to-amber-300",
-        glowColor: "shadow-rose-500/60",
-        ring: "ring-rose-500/60",
-        textColor: "text-rose-500",
-        bgColor: "bg-rose-50 dark:bg-rose-900/20",
-        description: "Tüm başarıları tamamladın. BKS'nin efsanesi oldun!",
     },
 ];
 
@@ -154,7 +111,11 @@ export function RankModal({ currentXP, currentRank, onClose }: RankModalProps) {
     const progressPct = Math.min(100, Math.round((progressInRank / rangeSize) * 100));
 
     return (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4" onClick={onClose}>
+        <div
+            className="fixed inset-0 z-[200] flex items-center justify-center p-4"
+            style={{ isolation: "isolate" }}
+            onClick={onClose}
+        >
             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
 
             <div
@@ -164,11 +125,14 @@ export function RankModal({ currentXP, currentRank, onClose }: RankModalProps) {
                 {/* Header */}
                 <div className={`relative px-6 py-5 bg-gradient-to-br ${currentRankData.gradient} overflow-hidden`}>
                     <div className="absolute inset-0 opacity-20" style={{ backgroundImage: "repeating-linear-gradient(45deg,transparent,transparent 10px,rgba(255,255,255,0.1) 10px,rgba(255,255,255,0.1) 11px)" }} />
-                    <button onClick={onClose} className="absolute top-4 right-4 p-1.5 rounded-full bg-white/20 hover:bg-white/30 text-white transition-colors">
+                    <button
+                        onClick={(e) => { e.stopPropagation(); onClose(); }}
+                        className="absolute top-4 right-4 p-1.5 rounded-full bg-white/20 hover:bg-white/30 text-white transition-colors"
+                    >
                         <X className="w-4 h-4" />
                     </button>
                     <div className="relative flex items-center gap-4">
-                        <div className={`w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center shadow-lg ring-2 ring-white/30`}>
+                        <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center shadow-lg ring-2 ring-white/30">
                             <span className="text-white scale-150">{currentRankData.icon}</span>
                         </div>
                         <div>
@@ -258,11 +222,11 @@ export function RankModal({ currentXP, currentRank, onClose }: RankModalProps) {
                         })}
                     </div>
 
-                    {/* Legend özel */}
-                    <div className="mt-4 p-3 rounded-2xl bg-gradient-to-br from-rose-50 to-amber-50 dark:from-rose-900/10 dark:to-amber-900/10 border border-rose-200/40 dark:border-rose-700/20">
+                    {/* Elmas özel */}
+                    <div className="mt-4 p-3 rounded-2xl bg-gradient-to-br from-sky-50 to-indigo-50 dark:from-sky-900/10 dark:to-indigo-900/10 border border-sky-200/40 dark:border-sky-700/20">
                         <div className="flex items-center gap-2 mb-1">
-                            <Flame className="w-4 h-4 text-rose-500" />
-                            <p className="text-xs font-black text-rose-600 dark:text-rose-400">Legend Rankına Ulaşmak İçin</p>
+                            <Flame className="w-4 h-4 text-sky-500" />
+                            <p className="text-xs font-black text-sky-600 dark:text-sky-400">Elmas Rankına Ulaşmak İçin</p>
                         </div>
                         <ul className="space-y-0.5">
                             {[
@@ -270,10 +234,10 @@ export function RankModal({ currentXP, currentRank, onClose }: RankModalProps) {
                                 "Tüm eğitim videolarını izle",
                                 "25+ sınav tamamla",
                                 "Tüm rozet gruplarında ilerleme kaydet",
-                                "25.000 XP'ye ulaş",
+                                "7.000 XP'ye ulaş",
                             ].map((item) => (
                                 <li key={item} className="flex items-center gap-1.5">
-                                    <Zap className="w-3 h-3 text-rose-400 flex-shrink-0" />
+                                    <Zap className="w-3 h-3 text-sky-400 flex-shrink-0" />
                                     <span className="text-[10px] text-zinc-600 dark:text-zinc-400">{item}</span>
                                 </li>
                             ))}

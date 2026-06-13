@@ -5,7 +5,7 @@ import Link from "next/link";
 import {
     Star, Trophy, BookOpen, Zap, Target, Award, Lock, Flame, Shield,
     Crown, Gem, GraduationCap, CheckCircle, XCircle, ChevronRight,
-    Video, User, Swords, Brain, Layers, Medal, TrendingUp, Bolt,
+    Video, User, Swords, Brain, Medal, TrendingUp, Bolt,
 } from "lucide-react";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
@@ -65,8 +65,8 @@ const TIER_LABELS: Record<string, string> = {
     orta: "Orta Seviye",
     ileri: "İleri Seviye",
     uzman: "Uzman",
-    master: "Master",
-    legend: "Legend",
+    master: "Uzman Pro",
+    legend: "Şampiyon",
 };
 
 const ACHIEVEMENTS: Achievement[] = [
@@ -84,10 +84,11 @@ const ACHIEVEMENTS: Achievement[] = [
         condition: (d) => d.isProfileComplete,
     },
     {
-        id: "kural_oku", title: "Kural Okuyucu", description: "Kural kitabını aç", detail: "Bilgi güçtür",
+        id: "kural_ilk5", title: "İlk 5 Kural", description: "Kural kitabındaki ilk 5 maddeyi oku", detail: "Her yolculuk bir adımla başlar",
         icon: <BookOpen className="w-5 h-5" />, glowColor: "shadow-blue-400/40", gradientFrom: "from-blue-400", gradientTo: "to-cyan-500",
         ringColor: "ring-blue-400/30", textColor: "text-blue-500", xp: 30, tier: "baslangic",
-        condition: (d) => d.kuralVisited,
+        condition: (d) => d.ruleProgressKuralCount >= 5,
+        progress: (d) => ({ current: Math.min(d.ruleProgressKuralCount, 5), max: 5 }),
     },
     {
         id: "yorum_taki", title: "Yorum Takipçisi", description: "Resmi yorumları incele", detail: "Derinlemesine analiz",
@@ -117,13 +118,6 @@ const ACHIEVEMENTS: Achievement[] = [
         ringColor: "ring-violet-400/30", textColor: "text-violet-500", xp: 50, tier: "gelisim",
         condition: (d) => d.examAttempts.length >= 1,
         progress: (d) => ({ current: Math.min(d.examAttempts.length, 1), max: 1 }),
-    },
-    {
-        id: "kural_25", title: "Kural Ezbercisi", description: "Kural kitabının %25'ini oku", detail: "Temeli oluştur",
-        icon: <BookOpen className="w-5 h-5" />, glowColor: "shadow-emerald-400/30", gradientFrom: "from-emerald-400", gradientTo: "to-green-500",
-        ringColor: "ring-emerald-400/30", textColor: "text-emerald-500", xp: 80, tier: "gelisim",
-        condition: (d) => d.totalKuralCount > 0 && d.ruleProgressKuralCount / d.totalKuralCount >= 0.25,
-        progress: (d) => ({ current: d.ruleProgressKuralCount, max: Math.ceil(d.totalKuralCount * 0.25) }),
     },
     {
         id: "yorum_25", title: "Yorum Okuyucu", description: "Yorum kitabının %25'ini oku", detail: "Derinlere dal",
@@ -204,13 +198,6 @@ const ACHIEVEMENTS: Achievement[] = [
         condition: (d) => d.veryHighScoreExams >= 1,
     },
     {
-        id: "kural_75", title: "Kural Hafızı", description: "Kural kitabının %75'ini oku", detail: "Derin bilgi",
-        icon: <Layers className="w-5 h-5" />, glowColor: "shadow-indigo-400/40", gradientFrom: "from-indigo-500", gradientTo: "to-violet-600",
-        ringColor: "ring-indigo-400/30", textColor: "text-indigo-500", xp: 400, tier: "ileri",
-        condition: (d) => d.totalKuralCount > 0 && d.ruleProgressKuralCount / d.totalKuralCount >= 0.75,
-        progress: (d) => ({ current: d.ruleProgressKuralCount, max: Math.ceil(d.totalKuralCount * 0.75) }),
-    },
-    {
         id: "ardisik20", title: "Hata Yok", description: "Bir sınavda 0 hata (20 soru)", detail: "Mükemmel kontrol",
         icon: <Swords className="w-5 h-5" />, glowColor: "shadow-rose-400/40", gradientFrom: "from-rose-500", gradientTo: "to-red-600",
         ringColor: "ring-rose-400/30", textColor: "text-rose-500", xp: 500, tier: "ileri",
@@ -251,13 +238,6 @@ const ACHIEVEMENTS: Achievement[] = [
         icon: <Crown className="w-5 h-5" />, glowColor: "shadow-amber-400/50", gradientFrom: "from-amber-300", gradientTo: "to-yellow-200",
         ringColor: "ring-amber-400/40", textColor: "text-amber-500", xp: 1000, tier: "uzman",
         condition: (d) => d.perfectExams >= 1,
-    },
-    {
-        id: "kural_100", title: "Kural Kitabı Ustası", description: "Kural kitabını %100 tamamla", detail: "Tüm kurallar parmak ucunda",
-        icon: <BookOpen className="w-5 h-5" />, glowColor: "shadow-emerald-400/50", gradientFrom: "from-emerald-400", gradientTo: "to-teal-400",
-        ringColor: "ring-emerald-400/40", textColor: "text-emerald-500", xp: 600, tier: "uzman",
-        condition: (d) => d.totalKuralCount > 0 && d.ruleProgressKuralCount >= d.totalKuralCount,
-        progress: (d) => ({ current: d.ruleProgressKuralCount, max: d.totalKuralCount }),
     },
     {
         id: "bes_zor", title: "Turnuva Hazır", description: "5 zor sınav tamamla", detail: "Turnuva seviyesinde hazırsın",
@@ -536,6 +516,9 @@ export function AchievementsSection({ maintenanceMode = false }: { maintenanceMo
     const [loading, setLoading] = useState(true);
     const [showRankModal, setShowRankModal] = useState(false);
     const [activeTab, setActiveTab] = useState<string>("all");
+    const [showAllLocked, setShowAllLocked] = useState(false);
+
+    useEffect(() => { setShowAllLocked(false); }, [activeTab]);
 
     useEffect(() => {
         fetch("/api/user/achievement-data")
@@ -561,6 +544,10 @@ export function AchievementsSection({ maintenanceMode = false }: { maintenanceMo
 
     const filteredEarned = activeTab === "all" ? earned : earned.filter((a) => a.tier === activeTab);
     const filteredLocked = activeTab === "all" ? locked : locked.filter((a) => a.tier === activeTab);
+
+    const INITIAL_SHOW = 6;
+    const visibleLocked = showAllLocked ? filteredLocked : filteredLocked.slice(0, INITIAL_SHOW);
+    const hiddenLockedCount = filteredLocked.length - INITIAL_SHOW;
 
     if (maintenanceMode) {
         return (
@@ -675,107 +662,6 @@ export function AchievementsSection({ maintenanceMode = false }: { maintenanceMo
 
                     <div className="border-t border-zinc-100 dark:border-zinc-800" />
 
-                    {/* ===== YATAY SCROLL ROADMAP ===== */}
-                    <div className="px-5 pt-5 pb-3">
-                        <p className="text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-3">İlerleme Haritası</p>
-                        <div className="relative overflow-x-auto modern-scrollbar pb-2">
-                            <div className="flex items-center min-w-max gap-0">
-                                {tiers.map((tier, tierIdx) => {
-                                    const tierAchievements = achievements.filter((a) => a.tier === tier);
-                                    const tierEarned = tierAchievements.filter((a) => a.condition(data));
-                                    const tierPct = tierAchievements.length > 0 ? Math.round((tierEarned.length / tierAchievements.length) * 100) : 0;
-                                    const isActive = activeTab === tier;
-                                    const isComplete = tierPct === 100;
-
-                                    // Her tier için gradient rengini belirle
-                                    const tierColors: Record<string, { from: string; to: string; dot: string; label: string }> = {
-                                        baslangic: { from: "from-zinc-400", to: "to-zinc-500", dot: "bg-zinc-400", label: "text-zinc-500" },
-                                        gelisim: { from: "from-amber-500", to: "to-orange-400", dot: "bg-amber-500", label: "text-amber-600" },
-                                        orta: { from: "from-blue-500", to: "to-cyan-400", dot: "bg-blue-500", label: "text-blue-600" },
-                                        ileri: { from: "from-teal-500", to: "to-emerald-400", dot: "bg-teal-500", label: "text-teal-600" },
-                                        uzman: { from: "from-violet-500", to: "to-purple-400", dot: "bg-violet-500", label: "text-violet-600" },
-                                        master: { from: "from-rose-500", to: "to-pink-400", dot: "bg-rose-500", label: "text-rose-600" },
-                                        legend: { from: "from-rose-500", to: "to-amber-400", dot: "bg-rose-500", label: "text-rose-500" },
-                                    };
-                                    const col = tierColors[tier] ?? tierColors.baslangic;
-
-                                    return (
-                                        <div key={tier} className="flex items-center">
-                                            {/* Tier Düğümü */}
-                                            <button
-                                                onClick={() => setActiveTab(isActive ? "all" : tier)}
-                                                className="flex flex-col items-center gap-1.5 group"
-                                                style={{ minWidth: 80 }}
-                                            >
-                                                {/* Mini rozet dots (üst — ilk 3) */}
-                                                <div className="flex gap-1 h-5 items-end justify-center">
-                                                    {tierAchievements.slice(0, 3).map((a, i) => {
-                                                        const isEarned = a.condition(data);
-                                                        return (
-                                                            <div
-                                                                key={i}
-                                                                className={`rounded-full transition-all ${isEarned ? `${col.dot} shadow-sm` : "bg-zinc-200 dark:bg-zinc-700"}`}
-                                                                style={{ width: 6, height: 6 + i * 2 }}
-                                                            />
-                                                        );
-                                                    })}
-                                                </div>
-
-                                                {/* Ana Tier Düğümü */}
-                                                <div className={`relative w-14 h-14 rounded-2xl flex flex-col items-center justify-center transition-all duration-300 border-2 ${
-                                                    isActive
-                                                        ? `bg-gradient-to-br ${col.from} ${col.to} border-transparent shadow-lg scale-110`
-                                                        : isComplete
-                                                        ? `bg-gradient-to-br ${col.from} ${col.to} border-transparent shadow-md opacity-90`
-                                                        : "bg-zinc-100 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 group-hover:border-zinc-300"
-                                                }`}>
-                                                    {isComplete && (
-                                                        <CheckCircle className={`w-4 h-4 mb-0.5 ${isActive ? "text-white" : "text-white"}`} />
-                                                    )}
-                                                    <span className={`text-[9px] font-black leading-none ${isActive || isComplete ? "text-white" : "text-zinc-500 dark:text-zinc-400"}`}>
-                                                        {tierEarned.length}/{tierAchievements.length}
-                                                    </span>
-                                                    <div className={`text-[8px] font-semibold mt-0.5 ${isActive || isComplete ? "text-white/80" : "text-zinc-400"}`}>
-                                                        {tierPct}%
-                                                    </div>
-                                                </div>
-
-                                                {/* Tier İsmi */}
-                                                <span className={`text-[9px] font-black text-center leading-tight max-w-[72px] ${isActive ? col.label : "text-zinc-400"}`}>
-                                                    {TIER_LABELS[tier]}
-                                                </span>
-
-                                                {/* Mini rozet dots (alt — kalan) */}
-                                                <div className="flex gap-1 h-5 items-start justify-center">
-                                                    {tierAchievements.slice(3, 6).map((a, i) => {
-                                                        const isEarned = a.condition(data);
-                                                        return (
-                                                            <div
-                                                                key={i}
-                                                                className={`rounded-full transition-all ${isEarned ? `${col.dot} shadow-sm` : "bg-zinc-200 dark:bg-zinc-700"}`}
-                                                                style={{ width: 6, height: 6 + (2 - i) * 2 }}
-                                                            />
-                                                        );
-                                                    })}
-                                                </div>
-                                            </button>
-
-                                            {/* Bağlantı Çizgisi */}
-                                            {tierIdx < tiers.length - 1 && (
-                                                <div className="flex-1 h-1 mx-1 rounded-full overflow-hidden bg-zinc-200 dark:bg-zinc-700" style={{ minWidth: 24 }}>
-                                                    <div
-                                                        className={`h-full bg-gradient-to-r ${col.from} ${col.to} rounded-full transition-all duration-700`}
-                                                        style={{ width: `${tierPct}%` }}
-                                                    />
-                                                </div>
-                                            )}
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    </div>
-
                     {/* Sekme Filtreleri (kompakt) */}
                     <div className="px-5 pb-2 flex gap-2 overflow-x-auto modern-scrollbar">
                         <button
@@ -822,8 +708,16 @@ export function AchievementsSection({ maintenanceMode = false }: { maintenanceMo
                                     <div className="h-px flex-1 bg-zinc-100 dark:bg-zinc-800" />
                                 </div>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                                    {filteredLocked.map((a) => <AchievementCard key={a.id} achievement={a} earned={false} data={data} />)}
+                                    {visibleLocked.map((a) => <AchievementCard key={a.id} achievement={a} earned={false} data={data} />)}
                                 </div>
+                                {!showAllLocked && hiddenLockedCount > 0 && (
+                                    <button
+                                        onClick={() => setShowAllLocked(true)}
+                                        className="mt-4 w-full py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-xs font-bold text-zinc-500 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
+                                    >
+                                        Daha Fazla Göster ({hiddenLockedCount})
+                                    </button>
+                                )}
                             </div>
                         )}
 

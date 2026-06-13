@@ -32,16 +32,13 @@ function computeXPAndRank(data: {
     if (data.totalAssignments > 0 && data.completedAssignments === data.totalAssignments) add("Eksiksiz Hakem", 200);
 
     // Kural kitabı rozetleri
-    if (data.kuralVisited) add("Kural Okuyucu", 30);
+    if (data.ruleProgressKuralCount >= 5) add("İlk 5 Kural", 30);
     if (data.yorumVisited) add("Yorum Takipçisi", 30);
 
     const kuralPct = data.totalKuralCount > 0 ? data.ruleProgressKuralCount / data.totalKuralCount : 0;
     const yorumPct = data.totalYorumCount > 0 ? data.ruleProgressYorumCount / data.totalYorumCount : 0;
 
-    if (kuralPct >= 0.25) add("Kural Ezbercisi", 80);
     if (yorumPct >= 0.25) add("Yorum Okuyucu", 70);
-    if (kuralPct >= 0.75) add("Kural Hafızı", 400);
-    if (kuralPct >= 1.0) add("Kural Kitabı Ustası", 600);
 
     // Video rozetleri
     if (data.videoWatchedCount >= 5) add("Video İzleyici", 120);
@@ -86,7 +83,7 @@ function computeXPAndRank(data: {
     if (hardExamCount >= 1 && perfectExams >= 1) add("Final Boss", 2000);
 
     // Normal rozet sayısı (legend öncesi) — BKS Şampiyonu buraya göre hesaplanır
-    const normalBadgeCount = 38;
+    const normalBadgeCount = 35;
     if (earned.length >= Math.ceil(normalBadgeCount * 0.8)) add("BKS Şampiyonu", 2500);
 
     if (kuralPct >= 1.0 && data.totalVideoCount > 0 && data.videoWatchedCount >= data.totalVideoCount && examCount >= 10) {

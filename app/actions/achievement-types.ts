@@ -27,12 +27,9 @@ export interface UserAchievementData {
 }
 
 export const RANK_LEVELS = [
-    { name: "Başlangıç", minXP: 0, maxXP: 100 },
-    { name: "Bronz", minXP: 100, maxXP: 500 },
-    { name: "Gümüş", minXP: 500, maxXP: 1500 },
-    { name: "Altın", minXP: 1500, maxXP: 4000 },
-    { name: "Platin", minXP: 4000, maxXP: 8000 },
-    { name: "Elmas", minXP: 8000, maxXP: 15000 },
-    { name: "Master", minXP: 15000, maxXP: 25000 },
-    { name: "Legend", minXP: 25000, maxXP: Infinity },
+    { name: "Başlangıç", minXP: 0, maxXP: 500 },
+    { name: "Bronz", minXP: 500, maxXP: 1500 },
+    { name: "Gümüş", minXP: 1500, maxXP: 3500 },
+    { name: "Altın", minXP: 3500, maxXP: 7000 },
+    { name: "Elmas", minXP: 7000, maxXP: Infinity },
 ];

@@ -13,7 +13,6 @@ import {
     GraduationCap,
     Star,
     Shield,
-    Crown,
     Gem,
     Medal,
 } from "lucide-react";
@@ -23,13 +22,10 @@ const LEVEL_CONFIG: Record<string, { color: string; bg: string; icon: React.Reac
     Bronz: { color: "text-amber-700", bg: "bg-amber-100 dark:bg-amber-900/30", icon: <Shield className="w-3.5 h-3.5" /> },
     Gümüş: { color: "text-zinc-500", bg: "bg-zinc-100 dark:bg-zinc-800", icon: <Shield className="w-3.5 h-3.5" /> },
     Altın: { color: "text-amber-500", bg: "bg-amber-50 dark:bg-amber-900/20", icon: <Trophy className="w-3.5 h-3.5" /> },
-    Platin: { color: "text-teal-500", bg: "bg-teal-50 dark:bg-teal-900/20", icon: <Crown className="w-3.5 h-3.5" /> },
     Elmas: { color: "text-sky-500", bg: "bg-sky-50 dark:bg-sky-900/20", icon: <Gem className="w-3.5 h-3.5" /> },
-    Master: { color: "text-violet-500", bg: "bg-violet-50 dark:bg-violet-900/20", icon: <Star className="w-3.5 h-3.5" /> },
-    Legend: { color: "text-rose-500", bg: "bg-rose-50 dark:bg-rose-900/20", icon: <Crown className="w-3.5 h-3.5" /> },
 };
 
-const LEVELS = ["Tümü", "Başlangıç", "Bronz", "Gümüş", "Altın", "Platin", "Elmas", "Master", "Legend"];
+const LEVELS = ["Tümü", "Başlangıç", "Bronz", "Gümüş", "Altın", "Elmas"];
 const USER_TYPES = ["Tümü", "Hakem", "Görevli"];
 
 export default function AchievementsPage() {

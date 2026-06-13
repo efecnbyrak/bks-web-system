@@ -73,7 +73,6 @@ export default function AdminTicketsPage() {
         setLoading(true);
         try {
             const params = new URLSearchParams();
-            if (statusFilter !== "ALL") params.set("status", statusFilter);
             if (search) params.set("search", search);
             const res = await fetch(`/api/admin/tickets?${params}`);
             const data = await res.json();
@@ -81,7 +80,7 @@ export default function AdminTicketsPage() {
         } finally {
             setLoading(false);
         }
-    }, [statusFilter, search]);
+    }, [search]);
 
     useEffect(() => { fetchTickets(); }, [fetchTickets]);
 
@@ -126,6 +125,10 @@ export default function AdminTicketsPage() {
     const closedCount = tickets.filter((t) => t.status === "CLOSED").length;
     const supportCount = tickets.filter((t) => t.type === "DESTEK").length;
     const suggestionCount = tickets.filter((t) => t.type === "ONERI").length;
+
+    const displayedTickets = statusFilter === "ALL"
+        ? tickets
+        : tickets.filter((t) => t.status === statusFilter);
 
     return (
         <>
@@ -244,14 +247,14 @@ export default function AdminTicketsPage() {
                                 <Loader2 className="w-5 h-5 animate-spin" />
                                 <span className="text-sm">Yükleniyor...</span>
                             </div>
-                        ) : tickets.length === 0 ? (
+                        ) : displayedTickets.length === 0 ? (
                             <div className="flex flex-col items-center py-12 text-center px-6">
                                 <Ticket className="w-10 h-10 text-zinc-300 dark:text-zinc-600 mb-3" />
                                 <p className="text-sm font-bold text-zinc-500 dark:text-zinc-400">Talep bulunamadı</p>
                             </div>
                         ) : (
                             <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
-                                {tickets.map((ticket) => {
+                                {displayedTickets.map((ticket) => {
                                     const s = STATUS_STYLES[ticket.status] ?? STATUS_STYLES.OPEN;
                                     const isActive = selected?.id === ticket.id;
                                     const images = parseImageUrls(ticket.imageUrls);
