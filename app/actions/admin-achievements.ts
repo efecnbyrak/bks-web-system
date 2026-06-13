@@ -257,3 +257,17 @@ export async function getAllUsersAchievements(): Promise<{ success: boolean; dat
         return { success: false, error: "Başarılar yüklenirken bir hata oluştu." };
     }
 }
+
+export async function resetAllAchievements(): Promise<{ success: boolean; error?: string }> {
+    try {
+        await db.$transaction([
+            db.examAttempt.deleteMany({}),
+            db.videoProgress.deleteMany({}),
+            db.ruleProgress.deleteMany({}),
+        ]);
+        return { success: true };
+    } catch (error: unknown) {
+        console.error("Error resetting achievements:", error);
+        return { success: false, error: "Sıfırlama sırasında bir hata oluştu." };
+    }
+}

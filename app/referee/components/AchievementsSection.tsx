@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
-import { RankModal, RANKS } from "./RankModal";
+import { RANKS } from "./RankModal";
 
 interface ExamAttempt {
     id: number;
@@ -355,6 +355,123 @@ function getRankData(xp: number) {
     return { rank: current, nextRank: RANKS[idx + 1] ?? null };
 }
 
+function RankTimeline({ currentXP }: { currentXP: number }) {
+    const { rank: currentRank } = getRankData(currentXP);
+    const currentIndex = RANKS.findIndex((r) => r.name === currentRank.name);
+
+    const rankColors: Record<string, { node: string; glow: string; line: string; text: string; xpBadge: string }> = {
+        "Başlangıç": { node: "bg-zinc-400", glow: "shadow-zinc-400/50", line: "bg-zinc-400", text: "text-zinc-500", xpBadge: "bg-zinc-200 dark:bg-zinc-700 text-zinc-500" },
+        "Bronz": { node: "bg-gradient-to-br from-amber-700 to-amber-500", glow: "shadow-amber-600/60", line: "bg-gradient-to-r from-amber-600 to-amber-400", text: "text-amber-700 dark:text-amber-400", xpBadge: "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400" },
+        "Gümüş": { node: "bg-gradient-to-br from-zinc-300 to-zinc-400", glow: "shadow-zinc-300/60", line: "bg-gradient-to-r from-zinc-300 to-zinc-400", text: "text-zinc-500 dark:text-zinc-300", xpBadge: "bg-zinc-200 dark:bg-zinc-700 text-zinc-500 dark:text-zinc-300" },
+        "Altın": { node: "bg-gradient-to-br from-amber-400 to-yellow-300", glow: "shadow-amber-400/70", line: "bg-gradient-to-r from-amber-400 to-yellow-300", text: "text-amber-500", xpBadge: "bg-amber-100 dark:bg-amber-900/30 text-amber-500" },
+        "Elmas": { node: "bg-gradient-to-br from-sky-400 to-indigo-400", glow: "shadow-sky-400/70", line: "bg-gradient-to-r from-sky-400 to-indigo-400", text: "text-sky-500", xpBadge: "bg-sky-100 dark:bg-sky-900/30 text-sky-500" },
+    };
+
+    return (
+        <div className="px-5 py-5 bg-gradient-to-br from-zinc-50 via-white to-zinc-50 dark:from-zinc-900 dark:via-zinc-900 dark:to-zinc-900/80 border-b border-zinc-100 dark:border-zinc-800">
+            <div className="flex items-center gap-2 mb-4">
+                <Trophy className="w-3.5 h-3.5 text-amber-500" />
+                <span className="text-[10px] font-black text-zinc-500 dark:text-zinc-400 uppercase tracking-widest">İlerleme Haritası</span>
+            </div>
+            <div className="overflow-x-auto pb-1 modern-scrollbar">
+                <div className="flex items-start min-w-max mx-auto px-2" style={{ minWidth: "480px" }}>
+                    {RANKS.map((rank, idx) => {
+                        const isPast = idx < currentIndex;
+                        const isCurrent = idx === currentIndex;
+                        const isLocked = idx > currentIndex;
+                        const colors = rankColors[rank.name];
+                        const isLast = idx === RANKS.length - 1;
+
+                        const xpInRank = currentXP - rank.minXP;
+                        const rankRange = RANKS[idx + 1] ? RANKS[idx + 1].minXP - rank.minXP : 1000;
+                        const pct = isCurrent ? Math.min(100, Math.round((xpInRank / rankRange) * 100)) : isPast ? 100 : 0;
+
+                        return (
+                            <div key={rank.name} className="flex items-start flex-1">
+                                <div className="flex flex-col items-center flex-shrink-0" style={{ width: "72px" }}>
+                                    {/* Node */}
+                                    <div className="relative flex items-center justify-center mb-2">
+                                        {isCurrent && (
+                                            <span className={`absolute inset-0 rounded-full ${colors.node} opacity-30 animate-ping`} style={{ animationDuration: "2s" }} />
+                                        )}
+                                        <div className={`relative flex items-center justify-center rounded-full border-2 transition-all duration-300 ${
+                                            isCurrent
+                                                ? `w-12 h-12 ${colors.node} border-white dark:border-zinc-800 shadow-lg ${colors.glow}`
+                                                : isPast
+                                                ? `w-9 h-9 ${colors.node} border-white dark:border-zinc-800 shadow-md`
+                                                : "w-8 h-8 bg-zinc-200 dark:bg-zinc-700 border-zinc-300 dark:border-zinc-600"
+                                        }`}>
+                                            {isPast ? (
+                                                <CheckCircle className="w-4 h-4 text-white" />
+                                            ) : isCurrent ? (
+                                                <span className="text-white scale-110">{rank.icon}</span>
+                                            ) : (
+                                                <Lock className="w-3 h-3 text-zinc-400 dark:text-zinc-500" />
+                                            )}
+                                        </div>
+                                    </div>
+                                    {/* Label */}
+                                    <span className={`text-[9px] font-black text-center leading-tight ${
+                                        isCurrent ? colors.text : isPast ? colors.text + " opacity-70" : "text-zinc-400 dark:text-zinc-600"
+                                    }`}>
+                                        {rank.name}
+                                    </span>
+                                    <span className={`text-[8px] font-medium mt-0.5 px-1.5 py-0.5 rounded-full ${
+                                        isCurrent || isPast ? colors.xpBadge : "bg-zinc-100 dark:bg-zinc-800 text-zinc-400 dark:text-zinc-600"
+                                    }`}>
+                                        {rank.minXP === 0 ? "0" : `${rank.minXP}`} XP
+                                    </span>
+                                    {/* Current rank XP detail */}
+                                    {isCurrent && (
+                                        <div className="mt-1.5 text-center">
+                                            <div className="w-14 h-1 bg-zinc-200 dark:bg-zinc-700 rounded-full overflow-hidden mx-auto">
+                                                <div className={`h-full ${colors.node} rounded-full transition-all duration-1000`} style={{ width: `${pct}%` }} />
+                                            </div>
+                                            <span className={`text-[7.5px] font-bold mt-0.5 block ${colors.text}`}>{pct}%</span>
+                                        </div>
+                                    )}
+                                </div>
+                                {/* Connector line */}
+                                {!isLast && (
+                                    <div className="flex-1 flex flex-col justify-start pt-5 px-1" style={{ minWidth: "24px" }}>
+                                        <div className="relative h-1 rounded-full bg-zinc-200 dark:bg-zinc-700 overflow-hidden">
+                                            <div
+                                                className={`h-full rounded-full transition-all duration-1000 ${
+                                                    isPast ? colors.line : isCurrent ? colors.line : ""
+                                                }`}
+                                                style={{ width: isPast ? "100%" : isCurrent ? `${pct}%` : "0%" }}
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+            {/* Current rank detail */}
+            <div className="mt-3 text-center">
+                {(() => {
+                    const nextRank = RANKS[currentIndex + 1];
+                    if (!nextRank) return (
+                        <p className="text-[10px] font-black text-sky-500 tracking-wide">🏆 En yüksek ranka ulaştın!</p>
+                    );
+                    const xpToNext = nextRank.minXP - currentXP;
+                    return (
+                        <p className="text-[10px] text-zinc-400 dark:text-zinc-500 font-medium">
+                            <span className={`font-black ${rankColors[currentRank.name].text}`}>{currentRank.name}</span>
+                            {" · "}
+                            <span>{currentXP} XP</span>
+                            {" · "}
+                            <span className="font-bold">{nextRank.name}&apos;a {xpToNext} XP kaldı</span>
+                        </p>
+                    );
+                })()}
+            </div>
+        </div>
+    );
+}
+
 function CircularProgress({ percent, size = 80, stroke = 7, gradient }: { percent: number; size?: number; stroke?: number; gradient: string }) {
     const r = (size - stroke) / 2;
     const circ = 2 * Math.PI * r;
@@ -514,7 +631,6 @@ export function AchievementsSection({ maintenanceMode = false }: { maintenanceMo
         veryHighScoreExams: 0, perfectExams: 0, hardExamCount: 0, avgScore: 0, totalQuestionsAnswered: 0,
     });
     const [loading, setLoading] = useState(true);
-    const [showRankModal, setShowRankModal] = useState(false);
     const [activeTab, setActiveTab] = useState<string>("all");
     const [showAllLocked, setShowAllLocked] = useState(false);
 
@@ -590,14 +706,6 @@ export function AchievementsSection({ maintenanceMode = false }: { maintenanceMo
 
     return (
         <>
-            {showRankModal && (
-                <RankModal
-                    currentXP={totalXP}
-                    currentRank={currentRank.name}
-                    onClose={() => setShowRankModal(false)}
-                />
-            )}
-
             <div>
                 <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden">
                     {/* Hero Header */}
@@ -616,14 +724,12 @@ export function AchievementsSection({ maintenanceMode = false }: { maintenanceMo
 
                             <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                                    <button
-                                        onClick={() => setShowRankModal(true)}
-                                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gradient-to-r ${currentRank.gradient} shadow-sm hover:opacity-90 transition-opacity cursor-pointer`}
-                                        title="Rank sistemini görüntüle"
+                                    <div
+                                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gradient-to-r ${currentRank.gradient} shadow-sm`}
                                     >
                                         <span className="text-white scale-75">{currentRank.icon}</span>
                                         <span className="text-[10px] font-black text-white tracking-wide">{currentRank.name}</span>
-                                    </button>
+                                    </div>
                                     <span className="text-xs text-zinc-400 font-medium">{earned.length}/{achievements.length} rozet</span>
                                 </div>
                                 <h3 className="text-base font-black text-zinc-900 dark:text-white leading-tight">Başarılarım</h3>
@@ -647,20 +753,9 @@ export function AchievementsSection({ maintenanceMode = false }: { maintenanceMo
                             </div>
                         </div>
 
-                        {/* Rank görüntüle butonu */}
-                        <div className="relative mt-3">
-                            <button
-                                onClick={() => setShowRankModal(true)}
-                                className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-xl bg-white/70 dark:bg-zinc-800/50 border border-zinc-200/60 dark:border-zinc-700/40 text-[11px] font-bold text-zinc-600 dark:text-zinc-300 hover:bg-white dark:hover:bg-zinc-800 transition-colors"
-                            >
-                                <Trophy className="w-3.5 h-3.5 text-amber-500" />
-                                Rank Sistemini Görüntüle
-                                <ChevronRight className="w-3.5 h-3.5" />
-                            </button>
-                        </div>
                     </div>
 
-                    <div className="border-t border-zinc-100 dark:border-zinc-800" />
+                    <RankTimeline currentXP={totalXP} />
 
                     {/* Sekme Filtreleri (kompakt) */}
                     <div className="px-5 pb-2 flex gap-2 overflow-x-auto modern-scrollbar">
@@ -716,6 +811,14 @@ export function AchievementsSection({ maintenanceMode = false }: { maintenanceMo
                                         className="mt-4 w-full py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-xs font-bold text-zinc-500 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
                                     >
                                         Daha Fazla Göster ({hiddenLockedCount})
+                                    </button>
+                                )}
+                                {showAllLocked && filteredLocked.length > INITIAL_SHOW && (
+                                    <button
+                                        onClick={() => setShowAllLocked(false)}
+                                        className="mt-4 w-full py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-xs font-bold text-zinc-500 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
+                                    >
+                                        Daha Az Göster
                                     </button>
                                 )}
                             </div>

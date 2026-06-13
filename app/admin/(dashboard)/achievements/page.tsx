@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import { getAllUsersAchievements } from "@/app/actions/admin-achievements";
+import { getAllUsersAchievements, resetAllAchievements } from "@/app/actions/admin-achievements";
 import { UserAchievementData } from "@/app/actions/achievement-types";
 import {
     Loader2,
@@ -15,6 +15,7 @@ import {
     Shield,
     Gem,
     Medal,
+    Trash2,
 } from "lucide-react";
 
 const LEVEL_CONFIG: Record<string, { color: string; bg: string; icon: React.ReactNode }> = {
@@ -36,6 +37,7 @@ export default function AchievementsPage() {
     const [search, setSearch] = useState("");
     const [typeFilter, setTypeFilter] = useState("Tümü");
     const [levelFilter, setLevelFilter] = useState("Tümü");
+    const [resetting, setResetting] = useState(false);
 
     useEffect(() => {
         getAllUsersAchievements()
@@ -64,6 +66,19 @@ export default function AchievementsPage() {
 
     const toggleExpand = (key: string) => setExpanded(prev => prev === key ? null : key);
 
+    const handleReset = async () => {
+        if (!confirm("Tüm kullanıcıların sınav sonuçları, kural ilerlemesi ve video ilerlemesi silinecek. Bu işlem geri alınamaz. Emin misiniz?")) return;
+        setResetting(true);
+        const res = await resetAllAchievements();
+        setResetting(false);
+        if (res.success) {
+            setData([]);
+            alert("Tüm başarı verileri sıfırlandı.");
+        } else {
+            alert(res.error ?? "Sıfırlama başarısız.");
+        }
+    };
+
     if (loading) {
         return (
             <div className="flex items-center justify-center min-h-[60vh]">
@@ -83,14 +98,24 @@ export default function AchievementsPage() {
 
     return (
         <div className="max-w-6xl mx-auto px-4 py-8 space-y-6">
-            <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-yellow-500 flex items-center justify-center shadow-sm">
-                    <Trophy className="w-5 h-5 text-white" />
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-yellow-500 flex items-center justify-center shadow-sm">
+                        <Trophy className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                        <h1 className="text-xl font-black text-zinc-900 dark:text-white">Başarılar</h1>
+                        <p className="text-xs text-zinc-500">{data.length} kullanıcı • XP&apos;ye göre sıralanmış</p>
+                    </div>
                 </div>
-                <div>
-                    <h1 className="text-xl font-black text-zinc-900 dark:text-white">Başarılar</h1>
-                    <p className="text-xs text-zinc-500">{data.length} kullanıcı • XP&apos;ye göre sıralanmış</p>
-                </div>
+                <button
+                    onClick={handleReset}
+                    disabled={resetting}
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 text-xs font-bold hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    {resetting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                    Tümünü Sıfırla
+                </button>
             </div>
 
             {/* Filtreler */}
