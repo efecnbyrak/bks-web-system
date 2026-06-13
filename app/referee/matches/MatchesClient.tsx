@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { Trophy, Calendar, MapPin, Navigation, Users, Briefcase, HeartPulse, BarChart3, Eye, Loader2, AlertCircle, ChevronDown, ChevronUp, RefreshCw, Clock, CheckCircle2, CalendarDays, Layers, Archive, Search, Download, FileSpreadsheet, PieChart, TrendingUp, Building2, Star } from "lucide-react";
+import { Trophy, Calendar, MapPin, Navigation, Users, Briefcase, HeartPulse, BarChart3, Eye, Loader2, AlertCircle, ChevronDown, ChevronUp, RefreshCw, Clock, CheckCircle2, CalendarDays, Archive, Search, Download, FileSpreadsheet, PieChart, TrendingUp, Building2, Star } from "lucide-react";
 import type * as ExcelJS from "exceljs";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
@@ -1027,11 +1027,10 @@ export function MatchesClient({ firstName, lastName, initialMatches = [], initia
             {/* Stats */}
             {allMatches.length > 0 && (
                 <div className="space-y-3">
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div className="grid grid-cols-3 sm:grid-cols-3 gap-3">
                         <StatCard icon={<Trophy className="w-5 h-5" />} value={allMatches.length} label="Toplam Maç" gradient="from-red-500 to-red-700" onClick={() => handleStatCardClick("all")} />
                         <StatCard icon={<CheckCircle2 className="w-5 h-5" />} value={playedMatches.length} label="Oynanmış" gradient="from-emerald-500 to-emerald-700" />
                         <StatCard icon={<CalendarDays className="w-5 h-5" />} value={upcomingMatches.length} label="Gelecek" gradient="from-blue-500 to-blue-700" onClick={() => handleStatCardClick("upcoming")} />
-                        <StatCard icon={<Layers className="w-5 h-5" />} value={haftaGroups.sortedWeeks.length} label="Hafta" gradient="from-violet-500 to-violet-700" onClick={() => handleStatCardClick("hafta")} />
                     </div>
                     {stats && (
                         <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
@@ -1114,13 +1113,13 @@ export function MatchesClient({ firstName, lastName, initialMatches = [], initia
                 <div className="space-y-2" ref={filterSectionRef}>
                     <div className="overflow-x-auto pb-1">
                         <div className="flex gap-2 min-w-max">
-                            <FilterTab active={filterMode === "all"} onClick={() => setFilterMode("all")} label={`🏀 Tümü (${allMatches.length})`} />
-                            <FilterTab active={filterMode === "played"} onClick={() => setFilterMode("played")} label={`✅ Oynanmış (${playedMatches.length})`} />
-                            <FilterTab active={filterMode === "upcoming"} onClick={() => setFilterMode("upcoming")} label={`📅 Gelecek (${upcomingMatches.length})`} />
-                            {okulMatches.length > 0 && <FilterTab active={filterMode === "okul"} onClick={() => setFilterMode("okul")} label={`🏫 Okul (${okulMatches.length})`} />}
-                            {ozelMatches.length > 0 && <FilterTab active={filterMode === "ozel"} onClick={() => setFilterMode("ozel")} label={`🏆 Özel Lig (${ozelMatches.length})`} />}
+                            <FilterTab active={filterMode === "all"} onClick={() => setFilterMode("all")} label={`🏀 Tümü (${allMatches.length})`} mobileLabel={`🏀 ${allMatches.length}`} />
+                            <FilterTab active={filterMode === "played"} onClick={() => setFilterMode("played")} label={`✅ Oynanmış (${playedMatches.length})`} mobileLabel={`✅ ${playedMatches.length}`} />
+                            <FilterTab active={filterMode === "upcoming"} onClick={() => setFilterMode("upcoming")} label={`📅 Gelecek (${upcomingMatches.length})`} mobileLabel={`📅 ${upcomingMatches.length}`} />
+                            {okulMatches.length > 0 && <FilterTab active={filterMode === "okul"} onClick={() => setFilterMode("okul")} label={`🏫 Okul (${okulMatches.length})`} mobileLabel={`🏫 ${okulMatches.length}`} />}
+                            {ozelMatches.length > 0 && <FilterTab active={filterMode === "ozel"} onClick={() => setFilterMode("ozel")} label={`🏆 Özel Lig (${ozelMatches.length})`} mobileLabel={`🏆 ${ozelMatches.length}`} />}
                             {haftaGroups.sortedWeeks.length > 0 && (
-                                <FilterTab active={filterMode === "hafta"} onClick={() => { setFilterMode("hafta"); if (!selectedHafta) setSelectedHafta(haftaGroups.sortedWeeks[haftaGroups.sortedWeeks.length - 1]); }} label={`📋 Hafta (${haftaGroups.sortedWeeks.length})`} />
+                                <FilterTab active={filterMode === "hafta"} onClick={() => { setFilterMode("hafta"); if (!selectedHafta) setSelectedHafta(haftaGroups.sortedWeeks[haftaGroups.sortedWeeks.length - 1]); }} label={`📋 Hafta (${haftaGroups.sortedWeeks.length})`} mobileLabel={`📋 ${haftaGroups.sortedWeeks.length}`} />
                             )}
                         </div>
                     </div>
@@ -1169,6 +1168,15 @@ export function MatchesClient({ firstName, lastName, initialMatches = [], initia
                         const RoleIcon = role.icon;
                         const isExpanded = expandedMatch === idx;
                         const isPast = checkIsPast(match.tarih, match.saat);
+                        const leagueBadgeLabel = (() => {
+                            if (match.hafta) return `${match.hafta}. Hafta`;
+                            const lt = (match.ligTuru || "").toUpperCase();
+                            if (lt.includes("OKUL")) return "Okul İl ve İlçe";
+                            if (lt.includes("ÖZEL LİG") || lt.includes("OZEL LIG") || lt.includes("ÜNİVERSİTE")) return "Özel Lig";
+                            if (lt.includes("HÜKMEN") || lt.includes("HUKMEN")) return "Hükmen";
+                            if (lt.includes("CEZA")) return "Ceza";
+                            return match.ligTuru || null;
+                        })();
 
                         return (
                             <div key={`${match.mac_adi}-${match.tarih}-${idx}`}
@@ -1198,7 +1206,7 @@ export function MatchesClient({ firstName, lastName, initialMatches = [], initia
                                         </div>
                                     </div>
                                     <div className="hidden sm:flex items-center gap-2 shrink-0">
-                                        {match.hafta && <span className="px-2 py-0.5 bg-violet-500/10 rounded-lg text-[10px] font-bold text-violet-600">{match.hafta}. Hafta</span>}
+                                        {leagueBadgeLabel && <span className="px-2 py-0.5 bg-violet-500/10 rounded-lg text-[10px] font-bold text-violet-600">{leagueBadgeLabel}</span>}
                                         <span className={`px-2 py-0.5 rounded-lg text-[10px] font-semibold ${isPast ? "bg-emerald-500/10 text-emerald-600" : "bg-blue-500/10 text-blue-600"}`}>
                                             {isPast ? "Oynanmış" : "Gelecek"}
                                         </span>
@@ -1210,7 +1218,7 @@ export function MatchesClient({ firstName, lastName, initialMatches = [], initia
                                 {/* Mobile badges */}
                                 {!isExpanded && (
                                     <div className="flex sm:hidden items-center gap-2 px-4 pb-3 -mt-1 flex-wrap">
-                                        {match.hafta && <span className="px-2 py-0.5 bg-violet-500/10 rounded-lg text-[10px] font-bold text-violet-600">{match.hafta}. Hafta</span>}
+                                        {leagueBadgeLabel && <span className="px-2 py-0.5 bg-violet-500/10 rounded-lg text-[10px] font-bold text-violet-600">{leagueBadgeLabel}</span>}
                                         <span className={`px-2 py-0.5 rounded-lg text-[10px] font-semibold ${isPast ? "bg-emerald-500/10 text-emerald-600" : "bg-blue-500/10 text-blue-600"}`}>
                                             {isPast ? "Oynanmış" : "Gelecek"}
                                         </span>
@@ -1222,7 +1230,7 @@ export function MatchesClient({ firstName, lastName, initialMatches = [], initia
                                 {isExpanded && (
                                     <div className="border-t border-zinc-100 dark:border-zinc-800 p-4 bg-zinc-50/50 dark:bg-zinc-800/20">
                                         <div className="flex sm:hidden flex-wrap gap-2 mb-3">
-                                            {match.hafta && <span className="px-2 py-0.5 bg-violet-500/10 rounded-lg text-[10px] font-bold text-violet-600">{match.hafta}. Hafta</span>}
+                                            {leagueBadgeLabel && <span className="px-2 py-0.5 bg-violet-500/10 rounded-lg text-[10px] font-bold text-violet-600">{leagueBadgeLabel}</span>}
                                             <span className={`px-2 py-0.5 rounded-lg text-[10px] font-semibold ${isPast ? "bg-emerald-500/10 text-emerald-600" : "bg-blue-500/10 text-blue-600"}`}>
                                                 {isPast ? "Oynanmış" : "Gelecek"}
                                             </span>
@@ -1348,13 +1356,14 @@ function StatCard({ icon, value, label, gradient, onClick, small }: { icon: Reac
     );
 }
 
-function FilterTab({ active, onClick, label }: { active: boolean; onClick: () => void; label: string }) {
+function FilterTab({ active, onClick, label, mobileLabel }: { active: boolean; onClick: () => void; label: string; mobileLabel?: string }) {
     return (
         <button onClick={onClick}
-            className={`px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${active
-                ? "bg-gradient-to-r from-red-600 to-red-700 text-white shadow-md scale-[1.02]"
-                : "bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:border-red-300"}`}>
-            {label}
+            className={`rounded-xl font-bold transition-all duration-150 whitespace-nowrap px-3 py-1.5 text-xs sm:px-4 sm:py-2 sm:text-sm ${active
+                ? "bg-gradient-to-r from-red-600 to-red-700 text-white shadow-md ring-2 ring-red-600/20 scale-[1.02]"
+                : "bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800/60 hover:border-red-300 dark:hover:border-red-700"}`}>
+            <span className="sm:hidden">{mobileLabel ?? label}</span>
+            <span className="hidden sm:inline">{label}</span>
         </button>
     );
 }
