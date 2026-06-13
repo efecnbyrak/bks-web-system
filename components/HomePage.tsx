@@ -29,8 +29,6 @@ export function HomePage() {
 
     return (
         <div className="min-h-screen flex flex-col bg-gradient-to-br from-red-700 to-zinc-950 text-white relative overflow-x-hidden">
-            {/* Background Decor */}
-            <div className="absolute inset-0 bg-[url('/basketball-bg-pattern.png')] opacity-10 pointer-events-none"></div>
 
             <main className="flex-1 flex flex-col items-center justify-center p-4 md:p-6 z-10">
                 <div className="flex flex-col items-center text-center max-w-2xl w-full bg-black/20 backdrop-blur-md p-5 md:p-8 rounded-[2.5rem] border border-white/10 shadow-2xl animate-in fade-in zoom-in duration-500">
