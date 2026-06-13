@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { Trophy, Calendar, MapPin, Navigation, Users, Briefcase, HeartPulse, BarChart3, Eye, Loader2, AlertCircle, ChevronDown, ChevronUp, RefreshCw, Clock, CheckCircle2, CalendarDays, Layers, Archive, Search, Download, FileSpreadsheet, PieChart } from "lucide-react";
+import { Trophy, Calendar, MapPin, Navigation, Users, Briefcase, HeartPulse, BarChart3, Eye, Loader2, AlertCircle, ChevronDown, ChevronUp, RefreshCw, Clock, CheckCircle2, CalendarDays, Layers, Archive, Search, Download, FileSpreadsheet, PieChart, TrendingUp, Building2, Star } from "lucide-react";
 import type * as ExcelJS from "exceljs";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
@@ -117,6 +117,9 @@ export function MatchesClient({ firstName, lastName, initialMatches = [], initia
 
     // Filter states
     const [searchQuery, setSearchQuery] = useState("");
+    const [showSuggestions, setShowSuggestions] = useState(false);
+    const [highlightedIdx, setHighlightedIdx] = useState(-1);
+    const searchContainerRef = useRef<HTMLDivElement>(null);
 
     // Download modal states
     const [downloadModalOpen, setDownloadModalOpen] = useState(false);
@@ -266,8 +269,80 @@ export function MatchesClient({ firstName, lastName, initialMatches = [], initia
 
         const playedPercent = total > 0 ? Math.round((playedMatches.length / total) * 100) : 0;
 
-        return { total, roles, ligs, playedPercent };
+        // Bu hafta (Pazartesi–Pazar)
+        const now = new Date();
+        const dayOfWeek = now.getDay(); // 0=Pazar
+        const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+        const weekStart = new Date(now);
+        weekStart.setDate(now.getDate() + mondayOffset);
+        weekStart.setHours(0, 0, 0, 0);
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekStart.getDate() + 6);
+        weekEnd.setHours(23, 59, 59, 999);
+        const buHafta = allMatches.filter(m => {
+            const d = parseTurkishDate(m.tarih);
+            return d && d >= weekStart && d <= weekEnd;
+        }).length;
+
+        // Bu ay
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+        const buAy = allMatches.filter(m => {
+            const d = parseTurkishDate(m.tarih);
+            return d && d >= monthStart && d <= monthEnd;
+        }).length;
+
+        // En çok oynadığım lig
+        const topLig = ligs.length > 0 ? ligs[0].label : null;
+
+        // En çok çıktığım salon
+        const salonCount: Record<string, number> = {};
+        for (const m of allMatches) {
+            const s = (m.salon || "").trim();
+            if (s) salonCount[s] = (salonCount[s] || 0) + 1;
+        }
+        const topSalon = Object.entries(salonCount).sort((a, b) => b[1] - a[1])[0]?.[0] || null;
+
+        // Ortalama maç/hafta
+        const allDates = allMatches.map(m => parseTurkishDate(m.tarih)).filter(Boolean) as Date[];
+        let avgMacHafta: number | null = null;
+        if (allDates.length > 0) {
+            const minDate = new Date(Math.min(...allDates.map(d => d.getTime())));
+            const maxDate = new Date(Math.max(...allDates.map(d => d.getTime())));
+            const totalWeeks = Math.max(1, Math.round((maxDate.getTime() - minDate.getTime()) / (7 * 24 * 3600 * 1000)) + 1);
+            avgMacHafta = parseFloat((total / totalWeeks).toFixed(1));
+        }
+
+        return { total, roles, ligs, playedPercent, buHafta, buAy, topLig, topSalon, avgMacHafta };
     }, [allMatches, playedMatches, firstName, lastName]);
+
+    // Autocomplete suggestions
+    const autocompleteSuggestions = useMemo(() => {
+        const q = normalizeTR(searchQuery.trim());
+        if (!q) return [];
+        const matchNames = new Set<string>();
+        const salonNames = new Set<string>();
+        for (const m of allMatches) {
+            if (m.mac_adi && normalizeTR(m.mac_adi).includes(q)) matchNames.add(m.mac_adi.trim());
+            if (m.salon && normalizeTR(m.salon).includes(q)) salonNames.add(m.salon.trim());
+        }
+        const result: { text: string; type: "mac" | "salon" }[] = [
+            ...Array.from(matchNames).slice(0, 4).map(t => ({ text: t, type: "mac" as const })),
+            ...Array.from(salonNames).slice(0, 3).map(t => ({ text: t, type: "salon" as const })),
+        ];
+        return result.slice(0, 6);
+    }, [allMatches, searchQuery]);
+
+    // Close suggestions when clicking outside
+    useEffect(() => {
+        function handleClick(e: MouseEvent) {
+            if (searchContainerRef.current && !searchContainerRef.current.contains(e.target as Node)) {
+                setShowSuggestions(false);
+            }
+        }
+        document.addEventListener("mousedown", handleClick);
+        return () => document.removeEventListener("mousedown", handleClick);
+    }, []);
 
     const filteredMatches = useMemo(() => {
         let baseList = allMatches;
@@ -886,15 +961,40 @@ export function MatchesClient({ firstName, lastName, initialMatches = [], initia
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2">
-                    <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+                    <div className="relative" ref={searchContainerRef}>
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 z-10" />
                         <input
                             type="text"
                             placeholder="Maç, Takım, Salon Ara..."
                             value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
+                            onChange={(e) => { setSearchQuery(e.target.value); setShowSuggestions(true); setHighlightedIdx(-1); }}
+                            onFocus={() => { if (searchQuery.trim()) setShowSuggestions(true); }}
+                            onKeyDown={(e) => {
+                                if (!showSuggestions || autocompleteSuggestions.length === 0) return;
+                                if (e.key === "ArrowDown") { e.preventDefault(); setHighlightedIdx(i => Math.min(i + 1, autocompleteSuggestions.length - 1)); }
+                                else if (e.key === "ArrowUp") { e.preventDefault(); setHighlightedIdx(i => Math.max(i - 1, -1)); }
+                                else if (e.key === "Enter" && highlightedIdx >= 0) { e.preventDefault(); setSearchQuery(autocompleteSuggestions[highlightedIdx].text); setShowSuggestions(false); setHighlightedIdx(-1); }
+                                else if (e.key === "Escape") { setShowSuggestions(false); setHighlightedIdx(-1); }
+                            }}
                             className="w-full sm:w-64 pl-9 pr-4 py-2 text-sm bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl focus:ring-2 focus:ring-red-600 outline-none transition-all dark:text-white"
                         />
+                        {showSuggestions && autocompleteSuggestions.length > 0 && (
+                            <div className="absolute top-full left-0 right-0 mt-1 z-50 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-xl overflow-hidden">
+                                {autocompleteSuggestions.map((s, idx) => (
+                                    <button
+                                        key={idx}
+                                        type="button"
+                                        className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-left text-sm transition-colors ${highlightedIdx === idx ? "bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400" : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800"}`}
+                                        onMouseEnter={() => setHighlightedIdx(idx)}
+                                        onMouseDown={(e) => { e.preventDefault(); setSearchQuery(s.text); setShowSuggestions(false); setHighlightedIdx(-1); }}
+                                    >
+                                        {s.type === "mac" ? <Trophy className="w-3.5 h-3.5 text-zinc-400 shrink-0" /> : <MapPin className="w-3.5 h-3.5 text-zinc-400 shrink-0" />}
+                                        <span className="truncate">{s.text}</span>
+                                        <span className="ml-auto text-[9px] font-bold uppercase tracking-wide text-zinc-400 shrink-0">{s.type === "mac" ? "Maç" : "Salon"}</span>
+                                    </button>
+                                ))}
+                            </div>
+                        )}
                     </div>
 
                     <button
@@ -926,11 +1026,22 @@ export function MatchesClient({ firstName, lastName, initialMatches = [], initia
 
             {/* Stats */}
             {allMatches.length > 0 && (
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    <StatCard icon={<Trophy className="w-5 h-5" />} value={allMatches.length} label="Toplam Maç" gradient="from-red-500 to-red-700" onClick={() => handleStatCardClick("all")} />
-                    <StatCard icon={<CheckCircle2 className="w-5 h-5" />} value={playedMatches.length} label="Oynanmış" gradient="from-emerald-500 to-emerald-700" />
-                    <StatCard icon={<CalendarDays className="w-5 h-5" />} value={upcomingMatches.length} label="Gelecek" gradient="from-blue-500 to-blue-700" onClick={() => handleStatCardClick("upcoming")} />
-                    <StatCard icon={<Layers className="w-5 h-5" />} value={haftaGroups.sortedWeeks.length} label="Hafta" gradient="from-violet-500 to-violet-700" onClick={() => handleStatCardClick("hafta")} />
+                <div className="space-y-3">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        <StatCard icon={<Trophy className="w-5 h-5" />} value={allMatches.length} label="Toplam Maç" gradient="from-red-500 to-red-700" onClick={() => handleStatCardClick("all")} />
+                        <StatCard icon={<CheckCircle2 className="w-5 h-5" />} value={playedMatches.length} label="Oynanmış" gradient="from-emerald-500 to-emerald-700" />
+                        <StatCard icon={<CalendarDays className="w-5 h-5" />} value={upcomingMatches.length} label="Gelecek" gradient="from-blue-500 to-blue-700" onClick={() => handleStatCardClick("upcoming")} />
+                        <StatCard icon={<Layers className="w-5 h-5" />} value={haftaGroups.sortedWeeks.length} label="Hafta" gradient="from-violet-500 to-violet-700" onClick={() => handleStatCardClick("hafta")} />
+                    </div>
+                    {stats && (
+                        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                            <StatCard icon={<Calendar className="w-5 h-5" />} value={stats.buHafta} label="Bu Hafta" gradient="from-pink-500 to-rose-600" />
+                            <StatCard icon={<CalendarDays className="w-5 h-5" />} value={stats.buAy} label="Bu Ay" gradient="from-orange-500 to-amber-600" />
+                            <StatCard icon={<TrendingUp className="w-5 h-5" />} value={stats.avgMacHafta ?? 0} label="Ort. Maç/Hafta" gradient="from-teal-500 to-cyan-600" />
+                            <StatCard icon={<Star className="w-5 h-5" />} value={stats.topLig ?? "—"} label="En Çok Oynadığım Lig" gradient="from-indigo-500 to-violet-600" small />
+                            <StatCard icon={<Building2 className="w-5 h-5" />} value={stats.topSalon ?? "—"} label="En Çok Çıktığım Salon" gradient="from-zinc-600 to-zinc-800" small />
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -1224,15 +1335,15 @@ export function MatchesClient({ firstName, lastName, initialMatches = [], initia
 // Sub-components
 // ============================================================
 
-function StatCard({ icon, value, label, gradient, onClick }: { icon: React.ReactNode; value: number; label: string; gradient: string; onClick?: () => void }) {
+function StatCard({ icon, value, label, gradient, onClick, small }: { icon: React.ReactNode; value: number | string; label: string; gradient: string; onClick?: () => void; small?: boolean }) {
     return (
         <div
             className={`bg-gradient-to-br ${gradient} rounded-2xl p-4 text-white shadow-lg${onClick ? " sm:cursor-default cursor-pointer active:scale-95 sm:active:scale-100 transition-transform" : ""}`}
             onClick={onClick}
         >
             <div className="opacity-80 mb-2">{icon}</div>
-            <p className="text-3xl font-black">{value}</p>
-            <p className="text-white/80 text-xs font-medium">{label}</p>
+            <p className={`font-black leading-tight ${small ? "text-base break-words" : "text-3xl"}`}>{value}</p>
+            <p className="text-white/80 text-xs font-medium mt-0.5">{label}</p>
         </div>
     );
 }

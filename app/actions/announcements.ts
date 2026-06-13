@@ -207,7 +207,7 @@ export async function sendAnnouncement(subject: string, content: string, target:
 export async function getAnnouncements() {
     const session = await getSession();
     if (!session || !session.userId) {
-        return [];
+        return { announcements: [], userId: 0 };
     }
 
     try {
@@ -219,15 +219,17 @@ export async function getAnnouncements() {
             }
         });
 
-        if (!user) return [];
+        if (!user) return { announcements: [], userId: session.userId };
 
         const userType = user.referee ? "REFEREE" : (user.official as any)?.officialType || "ALL";
+        const specificTarget = `SPECIFIC:`;
 
         const announcements = await db.announcement.findMany({
             where: {
                 OR: [
                     { target: "ALL" },
-                    { target: userType }
+                    { target: userType },
+                    { target: { startsWith: specificTarget } }
                 ]
             },
             include: {
@@ -238,16 +240,27 @@ export async function getAnnouncements() {
             orderBy: { createdAt: "desc" }
         });
 
-        return announcements.map(a => ({
-            id: a.id,
-            subject: a.subject,
-            content: a.content,
-            createdAt: a.createdAt,
-            isRead: a.reads.length > 0
-        }));
+        // Filter SPECIFIC announcements: only include if userId is in the list
+        const filtered = announcements.filter(a => {
+            if (!a.target.startsWith("SPECIFIC:")) return true;
+            const ids = a.target.replace("SPECIFIC:", "").split(",").map(Number).filter(Boolean);
+            return ids.includes(session.userId);
+        });
+
+        return {
+            userId: session.userId,
+            announcements: filtered.map(a => ({
+                id: a.id,
+                subject: a.subject,
+                content: a.content,
+                target: a.target,
+                createdAt: a.createdAt,
+                isRead: a.reads.length > 0
+            }))
+        };
     } catch (error) {
         console.error("[GET_ANNOUNCEMENTS_ERROR]", error);
-        return [];
+        return { announcements: [], userId: session.userId };
     }
 }
 

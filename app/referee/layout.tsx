@@ -10,6 +10,7 @@ import { getSetting } from "@/lib/settings-cache";
 import { IBANRequirementModal } from "@/components/IBANRequirementModal";
 import { MandatoryAnnouncementModal } from "@/components/announcements/MandatoryAnnouncementModal";
 import { UpcomingMatchPopup } from "@/components/matches/UpcomingMatchPopup";
+import { PenaltyLoginPopup } from "@/components/referee/PenaltyLoginPopup";
 
 export default async function RefereeLayout({
     children,
@@ -77,6 +78,7 @@ export default async function RefereeLayout({
 
                 <IBANRequirementModal isOpen={showIbanModal} />
                 <MandatoryAnnouncementModal />
+                <PenaltyLoginPopup />
                 <UpcomingMatchPopup />
 
                 {/* Dashboard Footer */}

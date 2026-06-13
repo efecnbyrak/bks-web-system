@@ -18,6 +18,10 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const group = (searchParams.get("group") || "REFEREE") as "REFEREE" | "GENERAL";
     const week = searchParams.get("week");
+    // activeRegion: "Avrupa" veya "Anadolu" geçilirse bölge önceliği dinamik olur.
+    // Görevli tipi filtresi varsa (type param) alfabetik sıralama isteniyor → "TYPE_FILTER" sentinel.
+    const typeParam = searchParams.get("type");
+    const activeRegion = typeParam ? "TYPE_FILTER" : (searchParams.get("activeRegion") || undefined);
 
     const { startDate: currentStartDate } = await getAvailabilityWindow();
     let startDate = currentStartDate;
@@ -66,8 +70,8 @@ export async function GET(request: Request) {
         }
     });
 
-    // Sıralama: Klasman → A-Z isim
-    const sortedForms = sortForms(allForms, group);
+    // Sıralama: Klasman → Bölge (aktif kategoriye göre dinamik) → A-Z isim
+    const sortedForms = sortForms(allForms, group, activeRegion);
 
     // 3. Generate Excel
     try {

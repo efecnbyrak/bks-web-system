@@ -1,21 +1,26 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Megaphone, CheckCircle2, Clock, ChevronDown, Loader2, Bell, Mail, MailOpen } from "lucide-react";
+import { Megaphone, CheckCircle2, Clock, ChevronDown, Loader2, Bell, Mail, MailOpen, Globe, User } from "lucide-react";
 import { getAnnouncements, markAnnouncementAsRead } from "@/app/actions/announcements";
 
 interface AnnouncementItem {
     id: number;
     subject: string;
     content: string;
+    target: string;
     createdAt: Date;
     isRead: boolean;
 }
 
+type Tab = "genel" | "bana-ozel";
+
 export default function AnnouncementsPage() {
     const [announcements, setAnnouncements] = useState<AnnouncementItem[]>([]);
+    const [userId, setUserId] = useState<number>(0);
     const [loading, setLoading] = useState(true);
     const [selectedId, setSelectedId] = useState<number | null>(null);
+    const [activeTab, setActiveTab] = useState<Tab>("genel");
 
     useEffect(() => {
         loadAnnouncements();
@@ -25,7 +30,8 @@ export default function AnnouncementsPage() {
         setLoading(true);
         try {
             const data = await getAnnouncements();
-            setAnnouncements(data.map((a: any) => ({
+            setUserId(data.userId);
+            setAnnouncements(data.announcements.map((a: any) => ({
                 ...a,
                 createdAt: new Date(a.createdAt)
             })));
@@ -41,7 +47,6 @@ export default function AnnouncementsPage() {
             return;
         }
         setSelectedId(id);
-
         const item = announcements.find(a => a.id === id);
         if (item && !item.isRead) {
             await markAnnouncementAsRead(id);
@@ -51,17 +56,21 @@ export default function AnnouncementsPage() {
         }
     };
 
-    const formatDate = (date: Date) => {
-        return new Intl.DateTimeFormat("tr-TR", {
-            day: "2-digit",
-            month: "long",
-            year: "numeric",
-            hour: "2-digit",
-            minute: "2-digit"
-        }).format(date);
-    };
+    const isPersonal = (target: string) => target.startsWith("SPECIFIC:");
 
-    const unreadCount = announcements.filter(a => !a.isRead).length;
+    const genel = announcements.filter(a => !isPersonal(a.target));
+    const banaOzel = announcements.filter(a => isPersonal(a.target));
+
+    const displayList = activeTab === "genel" ? genel : banaOzel;
+    const unreadGenel = genel.filter(a => !a.isRead).length;
+    const unreadBanaOzel = banaOzel.filter(a => !a.isRead).length;
+    const totalUnread = announcements.filter(a => !a.isRead).length;
+
+    const formatDate = (date: Date) =>
+        new Intl.DateTimeFormat("tr-TR", {
+            day: "2-digit", month: "long", year: "numeric",
+            hour: "2-digit", minute: "2-digit"
+        }).format(date);
 
     if (loading) {
         return (
@@ -91,10 +100,10 @@ export default function AnnouncementsPage() {
                             <p className="text-purple-200 text-xs font-bold uppercase tracking-widest">Sistem Bildirim Merkezi</p>
                         </div>
                     </div>
-                    {unreadCount > 0 ? (
+                    {totalUnread > 0 ? (
                         <div className="flex items-center gap-2 bg-white/20 backdrop-blur-md border border-white/20 px-4 py-2 rounded-xl self-start sm:self-auto">
                             <Bell className="w-4 h-4 text-white animate-pulse" />
-                            <span className="text-white text-sm font-black">{unreadCount} okunmamış</span>
+                            <span className="text-white text-sm font-black">{totalUnread} okunmamış</span>
                         </div>
                     ) : (
                         <div className="flex items-center gap-2 bg-white/10 border border-white/10 px-4 py-2 rounded-xl self-start sm:self-auto">
@@ -105,18 +114,61 @@ export default function AnnouncementsPage() {
                 </div>
             </div>
 
+            {/* Tabs */}
+            <div className="flex gap-2">
+                <button
+                    onClick={() => { setActiveTab("genel"); setSelectedId(null); }}
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold border transition-all ${
+                        activeTab === "genel"
+                            ? "bg-purple-600 text-white border-purple-600 shadow-lg shadow-purple-600/20"
+                            : "bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-800 hover:border-purple-300"
+                    }`}
+                >
+                    <Globe className="w-4 h-4" />
+                    Genel Duyurular
+                    {unreadGenel > 0 && (
+                        <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${activeTab === "genel" ? "bg-white/20 text-white" : "bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400"}`}>
+                            {unreadGenel}
+                        </span>
+                    )}
+                </button>
+                <button
+                    onClick={() => { setActiveTab("bana-ozel"); setSelectedId(null); }}
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold border transition-all ${
+                        activeTab === "bana-ozel"
+                            ? "bg-purple-600 text-white border-purple-600 shadow-lg shadow-purple-600/20"
+                            : "bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-800 hover:border-purple-300"
+                    }`}
+                >
+                    <User className="w-4 h-4" />
+                    Bana Özel
+                    {unreadBanaOzel > 0 && (
+                        <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${activeTab === "bana-ozel" ? "bg-white/20 text-white" : "bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400"}`}>
+                            {unreadBanaOzel}
+                        </span>
+                    )}
+                </button>
+            </div>
+
             {/* Announcements List */}
-            {announcements.length === 0 ? (
+            {displayList.length === 0 ? (
                 <div className="bg-white dark:bg-zinc-900 border border-dashed border-zinc-200 dark:border-zinc-800 rounded-2xl p-16 text-center">
                     <div className="w-16 h-16 bg-zinc-100 dark:bg-zinc-800 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                        <Megaphone className="w-8 h-8 text-zinc-300 dark:text-zinc-600" />
+                        {activeTab === "bana-ozel"
+                            ? <User className="w-8 h-8 text-zinc-300 dark:text-zinc-600" />
+                            : <Megaphone className="w-8 h-8 text-zinc-300 dark:text-zinc-600" />
+                        }
                     </div>
-                    <h3 className="text-zinc-600 dark:text-zinc-400 font-black uppercase italic tracking-tight mb-1">Henüz duyuru yok</h3>
-                    <p className="text-zinc-400 text-sm">Yeni duyurular burada görünecek.</p>
+                    <h3 className="text-zinc-600 dark:text-zinc-400 font-black uppercase italic tracking-tight mb-1">
+                        {activeTab === "bana-ozel" ? "Bana özel duyuru yok" : "Henüz duyuru yok"}
+                    </h3>
+                    <p className="text-zinc-400 text-sm">
+                        {activeTab === "bana-ozel" ? "Sana özel gönderilen mesajlar burada görünecek." : "Yeni duyurular burada görünecek."}
+                    </p>
                 </div>
             ) : (
                 <div className="space-y-3">
-                    {announcements.map((item, index) => (
+                    {displayList.map((item, index) => (
                         <div
                             key={item.id}
                             className={`group bg-white dark:bg-zinc-900 rounded-2xl overflow-hidden transition-all cursor-pointer shadow-sm hover:shadow-lg border-l-4 ${
@@ -127,9 +179,7 @@ export default function AnnouncementsPage() {
                             onClick={() => handleSelect(item.id)}
                             style={{ animationDelay: `${index * 50}ms` }}
                         >
-                            {/* Announcement Header */}
                             <div className="flex items-center gap-3 sm:gap-4 p-4 sm:p-5">
-                                {/* Icon */}
                                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
                                     !item.isRead
                                         ? "bg-purple-100 dark:bg-purple-900/30"
@@ -140,16 +190,13 @@ export default function AnnouncementsPage() {
                                         : <Mail className="w-5 h-5 text-purple-600 dark:text-purple-400" />
                                     }
                                 </div>
-
                                 <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-2 mb-1">
                                         {!item.isRead && (
                                             <span className="w-2 h-2 rounded-full bg-purple-500 animate-pulse shrink-0" />
                                         )}
                                         <h3 className={`font-black text-sm truncate tracking-tight ${
-                                            !item.isRead
-                                                ? "text-zinc-900 dark:text-white"
-                                                : "text-zinc-500 dark:text-zinc-400"
+                                            !item.isRead ? "text-zinc-900 dark:text-white" : "text-zinc-500 dark:text-zinc-400"
                                         }`}>
                                             {item.subject}
                                         </h3>
@@ -166,13 +213,10 @@ export default function AnnouncementsPage() {
                                         )}
                                     </div>
                                 </div>
-
                                 <ChevronDown className={`w-5 h-5 text-zinc-400 transition-transform shrink-0 ${
                                     selectedId === item.id ? "rotate-180" : ""
                                 } group-hover:text-purple-500`} />
                             </div>
-
-                            {/* Expanded Content */}
                             {selectedId === item.id && (
                                 <div className="px-4 sm:px-5 pb-4 sm:pb-5 border-t border-zinc-100 dark:border-zinc-800 animate-in slide-in-from-top-2 duration-200">
                                     <div
