@@ -648,6 +648,7 @@ model SupportTicket {
   imageUrls   String?  @db.Text // JSON array: ["data:image/...","..."]
   status      String   @default("OPEN") // "OPEN", "IN_PROGRESS", "CLOSED"
   adminNote   String?  @db.Text
+  replySeenAt DateTime? // Kullanıcı cevap pop-up'ını gördüğünde set edilir — tekrar göstermemek için
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

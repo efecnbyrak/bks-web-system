@@ -1,10 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { X, MessageSquare, ExternalLink, CheckCircle, AlertCircle, Clock } from "lucide-react";
 import Link from "next/link";
-
-const SESSION_KEY = "ticketReplyPopupShown";
 
 interface TicketWithReply {
     id: number;
@@ -26,9 +24,6 @@ export function TicketReplyPopup() {
     const [isOpen, setIsOpen] = useState(false);
 
     useEffect(() => {
-        const alreadySeen = sessionStorage.getItem(SESSION_KEY);
-        if (alreadySeen) return;
-
         fetch("/api/tickets/check-replies")
             .then((r) => r.json())
             .then((data) => {
@@ -37,29 +32,42 @@ export function TicketReplyPopup() {
                     setTickets(list);
                     setIsOpen(true);
                 }
-                sessionStorage.setItem(SESSION_KEY, "1");
             })
-            .catch(() => {
-                sessionStorage.setItem(SESSION_KEY, "1");
-            });
+            .catch(() => { /* sessizce geç */ });
     }, []);
 
-    const close = () => setIsOpen(false);
+    // Pop-up kapanınca görüldü olarak işaretle (DB'ye yaz — bir daha çıkmaz)
+    const markSeen = useCallback(async () => {
+        const ids = tickets.map((t) => t.id);
+        if (ids.length === 0) return;
+        try {
+            await fetch("/api/tickets/mark-reply-seen", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ ticketIds: ids }),
+            });
+        } catch {
+            // Hata olsa da pop-up kapanmalı
+        }
+    }, [tickets]);
+
+    const close = useCallback(async () => {
+        setIsOpen(false);
+        await markSeen();
+    }, [markSeen]);
 
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-zinc-950/60 backdrop-blur-sm animate-in fade-in duration-300">
-            <div className="relative w-full max-w-md mx-4 bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-8 duration-500">
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-zinc-950/60 backdrop-blur-sm animate-in fade-in duration-300">
+            <div className="relative w-full max-w-md bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-8 duration-500">
 
                 {/* Gradient Header */}
                 <div className="relative bg-gradient-to-r from-indigo-600 to-blue-500 px-6 py-5 overflow-hidden">
-                    {/* Dekoratif arka plan çemberi */}
                     <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
-
                     <div className="relative flex items-start justify-between">
                         <div className="flex items-center gap-3">
-                            <div className="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center rotate-3">
+                            <div className="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center rotate-3 shrink-0">
                                 <MessageSquare className="w-6 h-6 text-white" />
                             </div>
                             <div>
@@ -73,7 +81,8 @@ export function TicketReplyPopup() {
                         </div>
                         <button
                             onClick={close}
-                            className="w-8 h-8 rounded-lg bg-white/20 hover:bg-white/30 flex items-center justify-center text-white transition"
+                            className="w-8 h-8 rounded-lg bg-white/20 hover:bg-white/30 flex items-center justify-center text-white transition shrink-0"
+                            aria-label="Kapat"
                         >
                             <X className="w-4 h-4" />
                         </button>
@@ -81,7 +90,7 @@ export function TicketReplyPopup() {
                 </div>
 
                 {/* Ticket Listesi */}
-                <div className="p-4 space-y-3 max-h-72 overflow-y-auto">
+                <div className="p-4 space-y-3 max-h-[60vh] overflow-y-auto">
                     {tickets.map((ticket) => {
                         const statusCfg = STATUS_LABEL[ticket.status] ?? STATUS_LABEL.OPEN;
                         const StatusIcon = statusCfg.icon;
@@ -91,7 +100,7 @@ export function TicketReplyPopup() {
                                 className="bg-zinc-50 dark:bg-zinc-800 rounded-xl p-4 border border-zinc-200 dark:border-zinc-700"
                             >
                                 <div className="flex items-start justify-between gap-2 mb-2">
-                                    <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 line-clamp-1">
+                                    <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 line-clamp-2">
                                         {ticket.subject}
                                     </p>
                                     <span className={`flex items-center gap-1 text-xs font-medium shrink-0 ${statusCfg.color}`}>
@@ -100,7 +109,8 @@ export function TicketReplyPopup() {
                                     </span>
                                 </div>
                                 <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg px-3 py-2">
-                                    <p className="text-xs text-emerald-700 dark:text-emerald-300 line-clamp-2 leading-relaxed">
+                                    <p className="text-xs text-zinc-500 dark:text-zinc-400 font-bold uppercase tracking-wide mb-1">Yanıt</p>
+                                    <p className="text-xs text-emerald-700 dark:text-emerald-300 leading-relaxed whitespace-pre-line">
                                         {ticket.adminNote}
                                     </p>
                                 </div>
@@ -110,7 +120,7 @@ export function TicketReplyPopup() {
                 </div>
 
                 {/* Footer Butonlar */}
-                <div className="px-4 pb-4 pt-1 flex gap-3">
+                <div className="px-4 pb-4 pt-2 flex flex-col sm:flex-row gap-2">
                     <button
                         onClick={close}
                         className="flex-1 px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition"

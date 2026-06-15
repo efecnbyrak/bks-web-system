@@ -18,6 +18,7 @@ export async function GET() {
                 adminNote: { not: null },
                 status: { in: ["IN_PROGRESS", "CLOSED"] },
                 updatedAt: { gte: thirtyDaysAgo },
+                replySeenAt: null, // Sadece kullanıcının henüz görmediği cevapları döndür
             },
             orderBy: { updatedAt: "desc" },
             select: {
