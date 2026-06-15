@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifySession } from "@/lib/session";
 import { db } from "@/lib/db";
+import { sendAdminTicketNotification } from "@/lib/email";
+import { getSetting } from "@/lib/settings-cache";
 
 export async function GET() {
     try {
@@ -55,16 +57,45 @@ export async function POST(req: NextRequest) {
             imageUrlsJson = JSON.stringify(imageUrls);
         }
 
-        const ticket = await db.supportTicket.create({
-            data: {
-                userId: session.userId,
-                type: ticketType,
-                errorType: errorType ?? (ticketType === "ONERI" ? "GENEL" : "DIGER"),
-                subject,
-                description,
-                imageUrls: imageUrlsJson,
-            },
-        });
+        const [ticket, user, adminEmail] = await Promise.all([
+            db.supportTicket.create({
+                data: {
+                    userId: session.userId,
+                    type: ticketType,
+                    errorType: errorType ?? (ticketType === "ONERI" ? "GENEL" : "DIGER"),
+                    subject,
+                    description,
+                    imageUrls: imageUrlsJson,
+                },
+            }),
+            db.user.findUnique({
+                where: { id: session.userId },
+                select: {
+                    username: true,
+                    referee: { select: { firstName: true, lastName: true, email: true } },
+                    official: { select: { firstName: true, lastName: true, email: true } },
+                },
+            }),
+            getSetting("ADMIN_NOTIFICATION_EMAIL"),
+        ]);
+
+        if (adminEmail) {
+            const profile = user?.referee ?? user?.official;
+            const displayName = profile
+                ? `${profile.firstName} ${profile.lastName}`
+                : (user?.username ?? undefined);
+            sendAdminTicketNotification(adminEmail, {
+                id: ticket.id,
+                type: ticket.type,
+                errorType: ticket.errorType,
+                subject: ticket.subject,
+                description: ticket.description,
+                imageUrls: ticket.imageUrls ? JSON.parse(ticket.imageUrls) : null,
+                createdAt: ticket.createdAt,
+                userName: displayName,
+                userEmail: profile?.email ?? undefined,
+            }).catch(err => console.error("[TICKET NOTIFY] Mail gönderilemedi:", err));
+        }
 
         return NextResponse.json({ ticket }, { status: 201 });
     } catch (error) {

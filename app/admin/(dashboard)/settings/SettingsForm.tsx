@@ -3,7 +3,7 @@
 import { updateSystemSettingsBatch, advanceWeek, resetWeekCounter } from "@/app/actions/settings";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Loader2, CalendarClock, ChevronRight, RotateCcw } from "lucide-react";
+import { Loader2, CalendarClock, ChevronRight, RotateCcw, Mail } from "lucide-react";
 
 interface SettingsFormProps {
     initialMode: string;
@@ -13,6 +13,7 @@ interface SettingsFormProps {
     initialIbanRequired: boolean;
     initialMaintenanceMode: boolean;
     initialAchievementsMaintenanceMode: boolean;
+    initialAdminNotificationEmail: string;
     isSuperAdmin: boolean;
 }
 
@@ -24,6 +25,7 @@ export function SettingsForm({
     initialIbanRequired,
     initialMaintenanceMode,
     initialAchievementsMaintenanceMode,
+    initialAdminNotificationEmail,
     isSuperAdmin
 }: SettingsFormProps) {
     const [loading, setLoading] = useState(false);
@@ -37,6 +39,7 @@ export function SettingsForm({
     const [ibanRequiredVal, setIbanRequiredVal] = useState(initialIbanRequired);
     const [maintenanceModeVal, setMaintenanceModeVal] = useState(initialMaintenanceMode);
     const [achievementsMaintenanceModeVal, setAchievementsMaintenanceModeVal] = useState(initialAchievementsMaintenanceMode);
+    const [adminNotificationEmailVal, setAdminNotificationEmailVal] = useState(initialAdminNotificationEmail);
 
     const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -52,6 +55,7 @@ export function SettingsForm({
             { key: "IBAN_COLLECTION_ENABLED", value: String(ibanRequiredVal) },
             { key: "MATCHES_MAINTENANCE_MODE", value: String(maintenanceModeVal) },
             { key: "ACHIEVEMENTS_MAINTENANCE_MODE", value: String(achievementsMaintenanceModeVal) },
+            { key: "ADMIN_NOTIFICATION_EMAIL", value: adminNotificationEmailVal.trim() },
             ...(targetChanged ? [{ key: "AVAILABILITY_TARGET_MANUAL", value: "true" }] : []),
         ];
 
@@ -291,6 +295,23 @@ export function SettingsForm({
                             />
                         </div>
                     </div>
+
+                    {isSuperAdmin && (
+                        <div className="p-5 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-zinc-800">
+                            <div className="flex items-center gap-2 mb-1">
+                                <Mail className="w-4 h-4 text-red-600" />
+                                <p className="font-black text-zinc-900 dark:text-white text-sm uppercase italic">Destek Talebi Bildirim Maili</p>
+                            </div>
+                            <p className="text-xs text-zinc-500 font-bold uppercase italic mb-3">Yeni bir destek talebi açıldığında bildirim gönderilecek e-posta adresi</p>
+                            <input
+                                type="email"
+                                value={adminNotificationEmailVal}
+                                onChange={(e) => setAdminNotificationEmailVal(e.target.value)}
+                                placeholder="ornek@bks.org.tr"
+                                className="w-full bg-white dark:bg-zinc-700 border border-zinc-200 dark:border-zinc-600 rounded-xl px-4 py-3 text-sm font-black italic focus:ring-2 focus:ring-red-600 outline-none"
+                            />
+                        </div>
+                    )}
                 </div>
                 <div className="mt-8 flex justify-end">
                     <button disabled={loading} className="w-full md:w-auto bg-red-700 text-white px-10 py-4 rounded-2xl text-xs font-black tracking-widest uppercase italic hover:bg-black flex items-center justify-center gap-3 transition-all active:scale-95 shadow-xl shadow-red-700/20">

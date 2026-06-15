@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic';
 export default async function SettingsPage() {
     // Fetch settings — uses batched single-query cache
     const [settingsMap, window] = await Promise.all([
-        getSettings("AVAILABILITY_MODE", "CURRENT_SEASON", "IBAN_COLLECTION_ENABLED", "MATCHES_MAINTENANCE_MODE", "ACHIEVEMENTS_MAINTENANCE_MODE"),
+        getSettings("AVAILABILITY_MODE", "CURRENT_SEASON", "IBAN_COLLECTION_ENABLED", "MATCHES_MAINTENANCE_MODE", "ACHIEVEMENTS_MAINTENANCE_MODE", "ADMIN_NOTIFICATION_EMAIL"),
         getAvailabilityWindow(),
     ]);
 
@@ -32,6 +32,7 @@ export default async function SettingsPage() {
                     initialIbanRequired={settingsMap["IBAN_COLLECTION_ENABLED"] === "true"}
                     initialMaintenanceMode={settingsMap["MATCHES_MAINTENANCE_MODE"] === "true"}
                     initialAchievementsMaintenanceMode={settingsMap["ACHIEVEMENTS_MAINTENANCE_MODE"] === "true"}
+                    initialAdminNotificationEmail={settingsMap["ADMIN_NOTIFICATION_EMAIL"] || ""}
                     isSuperAdmin={session?.role === "SUPER_ADMIN"}
                 />
             </div>
