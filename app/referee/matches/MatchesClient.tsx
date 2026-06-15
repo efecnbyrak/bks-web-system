@@ -101,19 +101,85 @@ const ROLE_CONFIG = {
 
 type FilterMode = "all" | "played" | "upcoming" | "okul" | "ozel" | "hafta";
 
+const MATCHES_CACHE_KEY = "matchesCache_v1";
+const MATCHES_REFRESH_KEY = "matchesLastRefresh";
+const COOLDOWN_MS = 60 * 60 * 1000; // 1 saat
+
+interface MatchesCache {
+    matches: MatchData[];
+    lastSync: string | null;
+    cachedAt: number;
+}
+
+function loadCachedMatches(): MatchesCache | null {
+    if (typeof window === "undefined") return null;
+    try {
+        const raw = localStorage.getItem(MATCHES_CACHE_KEY);
+        if (!raw) return null;
+        const parsed: MatchesCache = JSON.parse(raw);
+        if (Date.now() - parsed.cachedAt > COOLDOWN_MS) return null;
+        return parsed;
+    } catch {
+        return null;
+    }
+}
+
+function saveCachedMatches(matches: MatchData[], lastSync: string | null) {
+    if (typeof window === "undefined") return;
+    try {
+        const cache: MatchesCache = { matches, lastSync, cachedAt: Date.now() };
+        localStorage.setItem(MATCHES_CACHE_KEY, JSON.stringify(cache));
+    } catch {
+        // localStorage quota exceeded — ignore
+    }
+}
+
+function getCooldownRemaining(): number {
+    if (typeof window === "undefined") return 0;
+    try {
+        const last = localStorage.getItem(MATCHES_REFRESH_KEY);
+        if (!last) return 0;
+        const elapsed = Date.now() - parseInt(last, 10);
+        return Math.max(0, COOLDOWN_MS - elapsed);
+    } catch {
+        return 0;
+    }
+}
+
+function formatCooldown(ms: number): string {
+    const minutes = Math.ceil(ms / 60000);
+    if (minutes >= 60) return "1 saat";
+    return `${minutes} dk`;
+}
+
 export function MatchesClient({ firstName, lastName, initialMatches = [], initialLastSync = null, initialPersonnelPhones = {} }: MatchesClientProps) {
-    const [allMatches, setAllMatches] = useState<MatchData[]>(() => dedupeMatches(initialMatches));
+    const cached = loadCachedMatches();
+    const [allMatches, setAllMatches] = useState<MatchData[]>(() =>
+        cached ? dedupeMatches(cached.matches) : dedupeMatches(initialMatches)
+    );
     const [personnelPhones] = useState<Record<string, string>>(initialPersonnelPhones);
-    const [loading, setLoading] = useState(initialMatches.length === 0);
+    const [loading, setLoading] = useState(initialMatches.length === 0 && !cached);
     const [refreshing, setRefreshing] = useState(false);
     const [refreshSuccess, setRefreshSuccess] = useState(false);
     const [error, setError] = useState("");
     const [filterMode, setFilterMode] = useState<FilterMode>("all");
     const [selectedHafta, setSelectedHafta] = useState<number | null>(null);
     const [expandedMatch, setExpandedMatch] = useState<number | null>(null);
-    const [lastSync, setLastSync] = useState<string | null>(initialLastSync);
+    const [lastSync, setLastSync] = useState<string | null>(cached?.lastSync ?? initialLastSync);
     const [visibleCount, setVisibleCount] = useState(30);
     const filterSectionRef = useRef<HTMLDivElement>(null);
+    const [cooldownRemaining, setCooldownRemaining] = useState(() => getCooldownRemaining());
+
+    // Cooldown sayacı — her dakika günceller
+    useEffect(() => {
+        if (cooldownRemaining <= 0) return;
+        const interval = setInterval(() => {
+            const remaining = getCooldownRemaining();
+            setCooldownRemaining(remaining);
+            if (remaining <= 0) clearInterval(interval);
+        }, 30000);
+        return () => clearInterval(interval);
+    }, [cooldownRemaining]);
 
     // Filter states
     const [searchQuery, setSearchQuery] = useState("");
@@ -130,7 +196,7 @@ export function MatchesClient({ firstName, lastName, initialMatches = [], initia
     // ============================================================
     // Load matches from DB-backed API
     // ============================================================
-    const loadMatches = useCallback(async (forceRefresh = false) => {
+    const loadMatches = useCallback(async (forceRefresh = false, manualRefresh = false) => {
         if (forceRefresh) {
             setRefreshing(true);
         } else {
@@ -143,8 +209,15 @@ export function MatchesClient({ firstName, lastName, initialMatches = [], initia
             const data = await res.json();
 
             if (res.ok) {
-                setAllMatches(dedupeMatches(data.matches || []));
-                setLastSync(data.lastSync || null);
+                const matches = dedupeMatches(data.matches || []);
+                const sync = data.lastSync || null;
+                setAllMatches(matches);
+                setLastSync(sync);
+                saveCachedMatches(matches, sync);
+                if (manualRefresh) {
+                    localStorage.setItem(MATCHES_REFRESH_KEY, Date.now().toString());
+                    setCooldownRemaining(COOLDOWN_MS);
+                }
             } else {
                 setError(data.error || "Maç verileri yüklenemedi.");
             }
@@ -161,7 +234,26 @@ export function MatchesClient({ firstName, lastName, initialMatches = [], initia
     }, []);
 
     useEffect(() => {
-        loadMatches(true);
+        // Eğer geçerli cache varsa arka planda sessizce güncelle, yoksa yükle
+        const hasFreshCache = loadCachedMatches() !== null;
+        if (hasFreshCache) {
+            // Cache'ten zaten yükledik, arka planda güncelle (loading spinner gösterme)
+            fetch("/api/matches")
+                .then(r => r.ok ? r.json() : null)
+                .then(data => {
+                    if (data?.matches) {
+                        const matches = dedupeMatches(data.matches);
+                        const sync = data.lastSync || null;
+                        setAllMatches(matches);
+                        setLastSync(sync);
+                        saveCachedMatches(matches, sync);
+                    }
+                })
+                .catch(() => { /* arka plan güncelleme sessizce başarısız olabilir */ });
+        } else {
+            loadMatches(true, false);
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     // ============================================================
@@ -1005,14 +1097,22 @@ export function MatchesClient({ firstName, lastName, initialMatches = [], initia
                         <span className="hidden sm:inline">Excel İndir</span>
                     </button>
 
-                    <button
-                        onClick={() => loadMatches(true)}
-                        disabled={refreshing}
-                        className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white rounded-xl text-sm font-bold shadow-lg shadow-red-600/20 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
-                    >
-                        <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
-                        <span className="hidden sm:inline">{refreshing ? "Yükleniyor" : "Yenile"}</span>
-                    </button>
+                    <div className="flex flex-col items-end gap-0.5">
+                        <button
+                            onClick={() => { if (!refreshing && cooldownRemaining <= 0) loadMatches(true, true); }}
+                            disabled={refreshing || cooldownRemaining > 0}
+                            title={cooldownRemaining > 0 ? `${formatCooldown(cooldownRemaining)} sonra yenileyebilirsiniz` : "Maçlarımı yenile"}
+                            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white rounded-xl text-sm font-bold shadow-lg shadow-red-600/20 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                        >
+                            <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
+                            <span className="hidden sm:inline">{refreshing ? "Yükleniyor" : "Yenile"}</span>
+                        </button>
+                        {cooldownRemaining > 0 && (
+                            <span className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 pr-1">
+                                {formatCooldown(cooldownRemaining)} sonra
+                            </span>
+                        )}
+                    </div>
                 </div>
             </div>
 

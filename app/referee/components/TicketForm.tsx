@@ -73,6 +73,7 @@ export function TicketForm() {
     const [uploadingFiles, setUploadingFiles] = useState<UploadingFile[]>([]);
     const [submitting, setSubmitting] = useState(false);
     const [success, setSuccess] = useState<string | null>(null);
+    const [successOverlay, setSuccessOverlay] = useState<{ subject: string; type: TicketType } | null>(null);
     const [formError, setFormError] = useState<string | null>(null);
     const [isDragging, setIsDragging] = useState(false);
 
@@ -230,14 +231,12 @@ export function TicketForm() {
                 return;
             }
 
-            setSuccess(
-                activeTab === "DESTEK"
-                    ? "Destek talebiniz başarıyla gönderildi."
-                    : "Öneriniz başarıyla gönderildi."
-            );
+            const submittedSubject = subject.trim();
+            const submittedType = activeTab;
             resetForm();
             await loadTickets();
-            setTimeout(() => { setView("list"); setSuccess(null); }, 2000);
+            setSuccessOverlay({ subject: submittedSubject, type: submittedType });
+            setView("list");
         } catch {
             setFormError("Bir hata oluştu. Lütfen tekrar deneyin.");
         } finally {
@@ -279,6 +278,57 @@ export function TicketForm() {
                         className="max-w-[90vw] max-h-[90vh] object-contain rounded-xl"
                         onClick={(e) => e.stopPropagation()}
                     />
+                </div>
+            )}
+
+            {/* Başarı Overlay */}
+            {successOverlay && (
+                <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
+                    <div className="relative w-full max-w-md bg-white dark:bg-zinc-900 rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-4 duration-400">
+                        {/* Gradient top band */}
+                        <div className={`h-2 w-full ${successOverlay.type === "DESTEK" ? "bg-gradient-to-r from-emerald-500 to-teal-500" : "bg-gradient-to-r from-amber-400 to-orange-400"}`} />
+
+                        <div className="p-8 flex flex-col items-center text-center">
+                            {/* Animated checkmark */}
+                            <div className="relative w-20 h-20 mb-5">
+                                <div className="absolute inset-0 rounded-full bg-emerald-100 dark:bg-emerald-900/30 animate-ping opacity-30" />
+                                <div className="relative w-20 h-20 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center shadow-xl shadow-emerald-500/30">
+                                    <CheckCircle className="w-10 h-10 text-white" />
+                                </div>
+                            </div>
+
+                            <h2 className="text-xl font-black text-zinc-900 dark:text-white mb-2 tracking-tight">
+                                {successOverlay.type === "DESTEK" ? "Talebiniz İletildi!" : "Öneriniz Alındı!"}
+                            </h2>
+                            <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-4 leading-relaxed">
+                                {successOverlay.type === "DESTEK"
+                                    ? "Destek talebiniz ekibimize iletilmiştir. En kısa sürede sizinle iletişime geçeceğiz."
+                                    : "Öneriniz ekibimize iletilmiştir. Değerlendirme sürecine alınacaktır."
+                                }
+                            </p>
+
+                            {/* Konu özeti */}
+                            <div className="w-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl px-4 py-3 mb-6">
+                                <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-1">
+                                    {successOverlay.type === "DESTEK" ? "Talep Konusu" : "Öneri Konusu"}
+                                </p>
+                                <p className="text-sm font-semibold text-zinc-700 dark:text-zinc-200 line-clamp-2 text-left">
+                                    {successOverlay.subject}
+                                </p>
+                            </div>
+
+                            <p className="text-xs text-zinc-400 dark:text-zinc-500 mb-6">
+                                Yanıtınız geldiğinde Duyurular &gt; Bana Özel bölümünde bildirim alacaksınız.
+                            </p>
+
+                            <button
+                                onClick={() => setSuccessOverlay(null)}
+                                className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm transition-all shadow-lg shadow-emerald-600/20 hover:scale-[1.02] active:scale-[0.98]"
+                            >
+                                Tamam
+                            </button>
+                        </div>
+                    </div>
                 </div>
             )}
 

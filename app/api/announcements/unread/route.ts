@@ -16,15 +16,35 @@ export async function GET() {
         const roleTargets = ["REFEREE", "OBSERVER", "TABLE", "STATISTICIAN", "HEALTH", "FIELD_COMMISSIONER"];
         if (roleTargets.includes(session.role)) targetGroups.push(session.role);
 
-        // Count announcements that are targeted to the user but not read
-        const unreadCount = await db.announcement.count({
+        // Count unread genel + rol bazlı duyurular
+        const unreadGenelCount = await db.announcement.count({
             where: {
                 target: { in: targetGroups },
-                reads: {
-                    none: { userId: session.userId }
-                }
+                reads: { none: { userId: session.userId } }
             }
         });
+
+        // Count unread SPECIFIC (bana özel) duyurular
+        const unreadSpecificCount = await db.announcement.count({
+            where: {
+                target: { contains: `SPECIFIC:` },
+                reads: { none: { userId: session.userId } }
+            }
+        });
+
+        // Sadece bu kullanıcıya ait SPECIFIC duyuruları filtrele
+        const specificAnnouncements = await db.announcement.findMany({
+            where: {
+                target: { contains: "SPECIFIC:" },
+                reads: { none: { userId: session.userId } }
+            },
+            select: { target: true }
+        });
+        const mySpecificUnread = specificAnnouncements.filter(a =>
+            a.target.split(":")[1]?.split(",").map(Number).includes(session.userId)
+        ).length;
+
+        const unreadCount = unreadGenelCount + mySpecificUnread;
 
         return NextResponse.json({
             hasUnread: unreadCount > 0,
