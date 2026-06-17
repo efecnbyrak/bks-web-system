@@ -5,6 +5,7 @@ import { verifyMobileToken } from "@/lib/mobile-auth";
 export async function GET(req: NextRequest) {
     const auth = await verifyMobileToken(req);
     if (!auth) {
+        console.warn("[mobile/v2/matches] 401 — verifyMobileToken returned null");
         return NextResponse.json({ error: "Yetkisiz erişim." }, { status: 401 });
     }
 

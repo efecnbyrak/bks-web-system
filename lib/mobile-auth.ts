@@ -20,15 +20,22 @@ export interface MobileAuthPayload {
 export async function verifyMobileToken(req: NextRequest): Promise<MobileAuthPayload | null> {
     const auth = req.headers.get("authorization") || "";
     const token = auth.startsWith("Bearer ") ? auth.slice(7) : "";
-    if (!token) return null;
+    if (!token) {
+        console.warn("[mobile-auth] No Bearer token in request");
+        return null;
+    }
     try {
         const key = getMobileKey();
         const { payload } = await jwtVerify(token, key);
         const userId = payload.userId as number;
         const role = payload.role as string;
-        if (!userId || !role) return null;
+        if (!userId || !role) {
+            console.warn("[mobile-auth] Token missing userId or role:", { userId, role });
+            return null;
+        }
         return { userId, role };
-    } catch {
+    } catch (err: any) {
+        console.warn("[mobile-auth] jwtVerify failed:", err?.code, err?.message);
         return null;
     }
 }
