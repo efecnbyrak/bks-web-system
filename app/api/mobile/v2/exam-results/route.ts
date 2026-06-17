@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-    const auth = await verifyToken(req);
+    const auth = await verifyMobileToken(req);
     if (!auth) {
         return NextResponse.json({ error: "Yetkisiz erişim." }, { status: 401 });
     }
