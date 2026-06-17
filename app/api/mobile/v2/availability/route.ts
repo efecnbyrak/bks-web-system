@@ -1,36 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createHash } from "crypto";
 import { db } from "@/lib/db";
 import { getAvailabilityWindow } from "@/lib/availability-utils";
 import { sendAvailabilityConfirmationEmail } from "@/lib/email";
-
-async function verifyToken(token: string): Promise<{ userId: number; role: string } | null> {
-    if (!token) return null;
-    try {
-        const tokenHash = createHash("sha256").update(token).digest("hex");
-        const user = await db.user.findFirst({
-            where: {
-                mobileToken: tokenHash,
-                mobileTokenExpiry: { gt: new Date() },
-            },
-            include: { role: true },
-        });
-        if (!user) return null;
-        return { userId: user.id, role: user.role.name };
-    } catch (err) {
-        console.error("[v2/availability] DB token verification error:", err);
-        return null;
-    }
-}
+import { verifyMobileToken } from "@/lib/mobile-auth";
 
 const VALID_SLOTS = ["Sabah", "Öğleden Sonra", "Akşam", "Tüm Gün", "Uygun Değil"];
 const VALID_REGIONS = ["Avrupa", "Anadolu", "BGM"];
 
 export async function GET(request: NextRequest) {
-    const { searchParams } = new URL(request.url);
-    const token = searchParams.get("token") || "";
-
-    const auth = await verifyToken(token);
+    const auth = await verifyMobileToken(request);
     if (!auth) {
         return NextResponse.json({ error: "Yetkisiz erişim." }, { status: 401 });
     }
@@ -134,9 +112,9 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "Geçersiz istek." }, { status: 400 });
     }
 
-    const { token, phone, regions, days } = body;
+    const { phone, regions, days } = body;
 
-    const auth = await verifyToken(token || "");
+    const auth = await verifyMobileToken(request);
     if (!auth) {
         return NextResponse.json({ error: "Yetkisiz erişim." }, { status: 401 });
     }
