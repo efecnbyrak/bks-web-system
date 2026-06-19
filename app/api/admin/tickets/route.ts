@@ -5,8 +5,8 @@ import { db } from "@/lib/db";
 export async function GET(req: NextRequest) {
     try {
         const session = await verifySession();
-        if (!session.userId || !["SUPER_ADMIN", "ADMIN", "ADMIN_IHK"].includes(session.role)) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        if (!session.userId || session.role !== "SUPER_ADMIN") {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
         }
 
         const { searchParams } = new URL(req.url);

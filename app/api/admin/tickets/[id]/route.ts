@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifySession } from "@/lib/session";
 import { db } from "@/lib/db";
+import { sendPushNotifications } from "@/lib/push-notifications";
 
 const STATUS_LABEL: Record<string, string> = {
     OPEN: "Beklemede",
@@ -11,8 +12,8 @@ const STATUS_LABEL: Record<string, string> = {
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
         const session = await verifySession();
-        if (!session.userId || !["SUPER_ADMIN", "ADMIN", "ADMIN_IHK"].includes(session.role)) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        if (!session.userId || session.role !== "SUPER_ADMIN") {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
         }
 
         const { id } = await params;
@@ -68,6 +69,22 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
                         sentCount: 0,
                     },
                 });
+
+                // Push notification — ticket sahibinin kayıtlı tokenlarına gönder
+                const pushTokenRows = await db.pushToken.findMany({
+                    where: { userId: existingTicket.userId },
+                    select: { token: true },
+                });
+                if (pushTokenRows.length > 0) {
+                    const tokens = pushTokenRows.map(r => r.token);
+                    sendPushNotifications(tokens, {
+                        title: "🎫 Destek Talebinize Yanıt",
+                        body: ticketSubject,
+                        data: { type: "ANNOUNCEMENT" },
+                        sound: "default",
+                        channelId: "announcements",
+                    }).catch(err => console.error("[push] Ticket reply push failed:", err));
+                }
             } catch (notifErr) {
                 console.error("Ticket reply notification error:", notifErr);
                 // Bildirim hatası ticket güncellemeyi engellemesin

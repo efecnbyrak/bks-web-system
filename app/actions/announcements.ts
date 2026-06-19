@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { sendEmailSafe } from "@/lib/email";
 import { getSession } from "@/lib/session";
 import { logAction } from "@/lib/logger";
+import { sendPushNotifications } from "@/lib/push-notifications";
 import type { ActionResult, ActionVoidResult } from "@/lib/types/actions";
 import { ROUTES } from "@/lib/routes";
 
@@ -74,11 +75,11 @@ export async function sendAnnouncement(subject: string, content: string, target:
             // Bireysel seçim: SPECIFIC:id1,id2,... formatında saklanır
             savedTarget = `SPECIFIC:${specificUserIds.join(",")}`;
             const refs = await db.referee.findMany({
-                where: { userId: { in: specificUserIds }, email: { not: null } },
+                where: { userId: { in: specificUserIds } },
                 select: { email: true },
             });
             const offs = await db.generalOfficial.findMany({
-                where: { userId: { in: specificUserIds }, email: { not: null } },
+                where: { userId: { in: specificUserIds } },
                 select: { email: true },
             });
             recipients = [...refs, ...offs].filter(r => r.email) as Array<{ email: string }>;
@@ -175,6 +176,41 @@ export async function sendAnnouncement(subject: string, content: string, target:
                 sentCount: successCount
             }
         });
+
+        // Push notifications — find target user IDs then their push tokens
+        try {
+            let targetUserIds: number[] = [];
+            if (specificUserIds && specificUserIds.length > 0) {
+                targetUserIds = specificUserIds;
+            } else if (target === "ALL") {
+                const refs = await db.referee.findMany({ where: { user: { isActive: true } }, select: { userId: true } });
+                const offs = await db.generalOfficial.findMany({ where: { user: { isActive: true } }, select: { userId: true } });
+                targetUserIds = [...refs, ...offs].map(u => u.userId);
+            } else {
+                const refs = await db.referee.findMany({ where: { user: { isActive: true } }, select: { userId: true } });
+                const offs = await db.generalOfficial.findMany({ where: { officialType: target, user: { isActive: true } }, select: { userId: true } });
+                targetUserIds = [...refs, ...offs].map(u => u.userId);
+            }
+
+            if (targetUserIds.length > 0) {
+                const pushTokenRows = await db.pushToken.findMany({
+                    where: { userId: { in: targetUserIds } },
+                    select: { token: true },
+                });
+                const tokens = pushTokenRows.map(r => r.token);
+                if (tokens.length > 0) {
+                    await sendPushNotifications(tokens, {
+                        title: "📢 Yeni Duyuru",
+                        body: sanitizedSubject,
+                        data: { type: "ANNOUNCEMENT" },
+                        sound: "default",
+                        channelId: "announcements",
+                    });
+                }
+            }
+        } catch (pushErr) {
+            console.error("[ANNOUNCEMENT PUSH ERROR]", pushErr);
+        }
 
         // Rotation Logic: If announcements count > 5 and 2 weeks have passed, delete older ones and only keep the newly added one.
         try {

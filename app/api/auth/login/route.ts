@@ -31,7 +31,7 @@ async function createMobileToken(userId: number, role: string) {
     return await new SignJWT({ userId, role, mobile: true })
         .setProtectedHeader({ alg: "HS256" })
         .setIssuedAt()
-        .setExpirationTime("30d")
+        .setExpirationTime("14d")
         .sign(getMobileKey());
 }
 
@@ -137,7 +137,7 @@ export async function POST(request: NextRequest) {
 
         // Store SHA-256 hash of token in DB for DB-backed verification
         const tokenHash = createHash("sha256").update(token).digest("hex");
-        const tokenExpiry = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
+        const tokenExpiry = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000); // 14 days
         await db.user.update({
             where: { id: user.id },
             data: { mobileToken: tokenHash, mobileTokenExpiry: tokenExpiry },

@@ -47,10 +47,10 @@ export async function decrypt(input: string): Promise<any> {
 }
 
 export async function createSession(userId: number, role: string, rememberMe: boolean = false) {
-    // rememberMe = true → 365 days (effectively permanent until manual logout)
+    // rememberMe = true → 30 days
     // rememberMe = false → 24 hours only
-    const durationMs = rememberMe ? 365 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000;
-    const durationStr = rememberMe ? "365d" : "24h";
+    const durationMs = rememberMe ? 30 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000;
+    const durationStr = rememberMe ? "30d" : "24h";
     const expires = new Date(Date.now() + durationMs);
 
     // Use ISO string for expires to avoid serialization issues
