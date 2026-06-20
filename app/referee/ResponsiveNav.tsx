@@ -95,7 +95,7 @@ export function ResponsiveNav({ refereeName, roleType, basePath = "/referee", ti
             {/* Mobile Header */}
             <div className="md:hidden bg-white dark:bg-zinc-900 border-b dark:border-zinc-800 p-4 flex items-center justify-between sticky top-0 z-50 h-16">
                 <div className="flex items-center gap-2">
-                    <Image src="/logo.png" alt="BKS Logo" width={32} height={32} className="object-contain" priority />
+                    <Image src={imageUrl || "/hakem/defaultHakem.png"} alt="BKS Logo" width={32} height={32} className="rounded-full object-cover aspect-square" priority />
                     <span className="font-bold text-lg text-zinc-900 dark:text-white">{title}</span>
                 </div>
                 {hasNewMatches && (
@@ -111,7 +111,7 @@ export function ResponsiveNav({ refereeName, roleType, basePath = "/referee", ti
                 <div className="flex flex-col h-full p-4">
                     {/* Desktop Logo */}
                     <div className="hidden md:flex items-center gap-2 mb-6 h-8">
-                        <Image src="/logo.png" alt="BKS Logo" width={32} height={32} className="object-contain" priority />
+                        <Image src={imageUrl || "/hakem/defaultHakem.png"} alt="BKS Logo" width={32} height={32} className="rounded-full object-cover aspect-square" priority />
                         <span className="font-bold text-xl text-zinc-900 dark:text-white">{title}</span>
                     </div>
 
