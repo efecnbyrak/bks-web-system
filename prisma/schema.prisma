@@ -44,6 +44,8 @@ model User {
   securityAnswer String?
   mobileToken       String?   @unique
   mobileTokenExpiry DateTime?
+  mobileTokenApp       String?   @unique
+  mobileTokenAppExpiry DateTime?
   passwordResetRequired Boolean @default(false)
 
   auditLogs AuditLog[]
@@ -584,6 +586,8 @@ model ParsedMatch {
   kaynakDosya     String
   driveFileId     Int
   driveFile       DriveFile @relation(fields: [driveFileId], references: [id], onDelete: Cascade)
+  cancelledAt     DateTime?
+  cancelReason    String?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 

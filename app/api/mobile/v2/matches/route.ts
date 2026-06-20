@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
     try {
         const [assignments, syncState] = await Promise.all([
             db.userMatchAssignment.findMany({
-                where: { userId: auth.userId },
+                where: { userId: auth.userId, match: { cancelledAt: null } },
                 include: { match: true },
                 orderBy: { match: { tarihDate: "desc" } },
             }),

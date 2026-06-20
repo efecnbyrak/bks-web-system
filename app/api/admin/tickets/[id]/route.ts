@@ -102,7 +102,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     try {
         const session = await verifySession();
         if (!session.userId || session.role !== "SUPER_ADMIN") {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+            return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
         }
 
         const { id } = await params;
