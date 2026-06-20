@@ -61,7 +61,7 @@ export const getAvailabilityWindow = cache(async function getAvailabilityWindow(
     if (isManualOverride) {
         const manualWeekDeadline = new Date(storedTargetDate);
         manualWeekDeadline.setDate(storedTargetDate.getDate() - 4); // Tuesday before target Saturday
-        manualWeekDeadline.setHours(20, 30, 0, 0);
+        manualWeekDeadline.setHours(17, 30, 0, 0); // 17:30 UTC = 20:30 TRT
         if (today > manualWeekDeadline) {
             isManualOverride = false;
             didManualExpired = true;
@@ -148,17 +148,17 @@ export const getAvailabilityWindow = cache(async function getAvailabilityWindow(
 
     const endDate = new Date(currentTarget);
     endDate.setDate(currentTarget.getDate() + 6); // Friday
-    endDate.setHours(23, 59, 59, 999);
+    endDate.setHours(20, 59, 59, 999); // 20:59:59 UTC = 23:59:59 TRT (aynı gün kalır)
 
     // Opening: Sunday BEFORE the operational week (currentTarget - 6 days)
     const openTime = new Date(currentTarget);
     openTime.setDate(currentTarget.getDate() - 6);
-    openTime.setHours(15, 0, 0, 0);
+    openTime.setHours(12, 0, 0, 0); // 12:00 UTC = 15:00 TRT
 
     // Closing: Tuesday OF the current submission week (currentTarget - 4 days)
     const deadline = new Date(currentTarget);
     deadline.setDate(currentTarget.getDate() - 4);
-    deadline.setHours(20, 30, 0, 0); // User's specific example was 20:30
+    deadline.setHours(17, 30, 0, 0); // 17:30 UTC = 20:30 TRT
 
     // 3. Lock Status
     let isLocked = today < openTime || today > deadline;
