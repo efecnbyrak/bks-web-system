@@ -33,10 +33,8 @@ export function HomePage() {
             <main className="flex-1 flex flex-col items-center justify-center p-4 md:p-6 z-10">
                 <div className="flex flex-col items-center text-center max-w-2xl w-full bg-black/20 backdrop-blur-md p-5 md:p-8 rounded-[2.5rem] border border-white/10 shadow-2xl animate-in fade-in zoom-in duration-500">
                     {/* Logo Container */}
-                    <div className="bg-red-700/20 backdrop-blur-md p-5 md:p-6 rounded-[2rem] mb-6 md:mb-8 shadow-2xl border border-white/10 transform hover:scale-105 transition-all duration-500">
-                        <div className="w-20 h-20 md:w-24 md:h-24 bg-gradient-to-br from-red-500 to-red-800 rounded-2xl flex items-center justify-center text-3xl md:text-4xl font-black text-white shadow-inner">
-                            BKS
-                        </div>
+                    <div className="mb-6 md:mb-8 transform hover:scale-105 transition-all duration-500">
+                        <img src="/logo.png" alt="BKS Logo" className="w-24 h-24 md:w-28 md:h-28 object-contain" />
                     </div>
 
                     <h1 className="text-3xl md:text-5xl font-black uppercase tracking-tighter mb-2 italic">
