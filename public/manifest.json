@@ -1,0 +1,14 @@
+{
+  "name": "Basketbol Koordinasyon Sistemi",
+  "short_name": "BKS",
+  "description": "Basketbol Hakem ve Genel Görevli Koordinasyon ve Atama Platformu",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#C8102E",
+  "icons": [
+    { "src": "/logo.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/logo.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/apple-touch-icon.png", "sizes": "180x180", "type": "image/png" }
+  ]
+}

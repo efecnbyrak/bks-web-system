@@ -22,6 +22,12 @@ export const metadata: Metadata = {
   keywords: ["basketbol", "hakem", "görevli", "tbf", "koordinasyon", "atama", "BKS"],
   authors: [{ name: "BKS Team" }],
   robots: "index, follow",
+  manifest: "/manifest.json",
+  icons: {
+    icon: "/logo.png",
+    apple: "/apple-touch-icon.png",
+    shortcut: "/favicon.png",
+  },
 };
 
 export const viewport = {
