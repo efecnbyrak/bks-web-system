@@ -11,10 +11,14 @@ export async function GET(req: NextRequest) {
     }
 
     try {
-        const tickets = await db.supportTicket.findMany({
+        const rows = await db.supportTicket.findMany({
             where: { userId: auth.userId },
             orderBy: { createdAt: "desc" },
         });
+        const tickets = rows.map((t) => ({
+            ...t,
+            hasNewReply: t.adminNote !== null && t.replySeenAt === null,
+        }));
         return NextResponse.json({ tickets });
     } catch (error) {
         console.error("[mobile/v2/tickets] GET error:", error);

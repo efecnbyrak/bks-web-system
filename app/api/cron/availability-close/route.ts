@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { sendPushNotifications } from "@/lib/push-notifications";
 
 async function getSettings() {
     const defaultSettings = {
@@ -89,6 +90,36 @@ export async function GET(req: Request) {
             console.log("Cron Close Announcement created successfully");
         } catch (announcementError) {
             console.error("Cron Error (Close) - Announcement Creation:", announcementError);
+        }
+
+        // Push bildirimleri gönder (sadece formu doldurmayanlara)
+        try {
+            const unsubmittedUserIds: number[] = [];
+            const unsubRefereesFull = await db.referee.findMany({
+                where: { id: { notIn: submittedRefereeIds as number[] } } as any,
+                select: { userId: true },
+            });
+            const unsubOfficialsFull = await db.generalOfficial.findMany({
+                where: { id: { notIn: submittedOfficialIds as number[] } } as any,
+                select: { userId: true },
+            });
+            unsubRefereesFull.forEach(r => { if ((r as any).userId) unsubmittedUserIds.push((r as any).userId); });
+            unsubOfficialsFull.forEach(o => { if ((o as any).userId) unsubmittedUserIds.push((o as any).userId); });
+
+            const pushTokenRows = await db.pushToken.findMany({
+                where: unsubmittedUserIds.length > 0 ? { userId: { in: unsubmittedUserIds } } : {},
+                select: { token: true },
+            });
+            const tokens = pushTokenRows.map((r) => r.token);
+            await sendPushNotifications(tokens, {
+                title: "⏰ Uygunluk Formu Kapanıyor",
+                body: "Form bugün saat 20:30'da kapanacaktır. Lütfen doldurunuz.",
+                data: { type: "AVAILABILITY" },
+                sound: "default",
+                channelId: "availability",
+            });
+        } catch (pushError) {
+            console.error("Cron Error (Close) - Push Notification:", pushError);
         }
 
         const { sendEmailSafe } = await import("@/lib/email");

@@ -56,6 +56,7 @@ export const ROUTES = {
     API_USER_ACHIEVEMENT_DATA: "/api/user/achievement-data",
     API_TICKETS: "/api/tickets",
     API_ADMIN_TICKETS: "/api/admin/tickets",
+    API_TICKETS_CHECK_REPLIES: "/api/tickets/check-replies",
 } as const;
 
 export type Route = typeof ROUTES[keyof typeof ROUTES];

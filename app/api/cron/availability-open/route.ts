@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { sendPushNotifications } from "@/lib/push-notifications";
 
 async function getSettings() {
     const defaultSettings = {
@@ -64,6 +65,23 @@ export async function GET(req: Request) {
             console.log("Cron Open Announcement created successfully");
         } catch (announcementError) {
             console.error("Cron Error (Open) - Announcement Creation:", announcementError);
+        }
+
+        // Push bildirimleri gönder
+        try {
+            const pushTokenRows = await db.pushToken.findMany({
+                select: { token: true },
+            });
+            const tokens = pushTokenRows.map((r) => r.token);
+            await sendPushNotifications(tokens, {
+                title: "📢 Uygunluk Formu Açıldı",
+                body: "Önümüzdeki hafta için uygunluk formunuz açılmıştır. Lütfen doldurunuz.",
+                data: { type: "AVAILABILITY" },
+                sound: "default",
+                channelId: "availability",
+            });
+        } catch (pushError) {
+            console.error("Cron Error (Open) - Push Notification:", pushError);
         }
 
         const { sendEmailSafe } = await import("@/lib/email");

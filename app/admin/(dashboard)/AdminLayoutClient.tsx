@@ -7,6 +7,7 @@ import { Users, Calendar, LayoutDashboard, Settings, LogOut, Briefcase, History 
 import Image from "next/image";
 import { useState, useEffect } from "react";
 import { ROUTES } from "@/lib/routes";
+import { useNotifications } from "@/hooks/useNotifications";
 
 interface AdminLayoutClientProps {
     children: React.ReactNode;
@@ -16,24 +17,14 @@ interface AdminLayoutClientProps {
 
 export function AdminLayoutClient({ children, role, imageUrl }: AdminLayoutClientProps) {
     const [isMoreOpen, setIsMoreOpen] = useState(false);
-    const [hasNewMatches, setHasNewMatches] = useState(false);
     const pathname = usePathname();
 
-    useEffect(() => {
-        const checkNotifications = async () => {
-            try {
-                const res = await fetch(ROUTES.API_MATCHES_NOTIFICATION);
-                const data = await res.json();
-                setHasNewMatches(data.hasNew);
-            } catch (e) { }
-        };
-        checkNotifications();
-        const interval = setInterval(checkNotifications, 5 * 60 * 1000);
-        return () => clearInterval(interval);
-    }, []);
+    const { hasNewMatches, clearMatchNotification } = useNotifications({
+        include: { matches: true, announcements: false, tickets: false },
+    });
 
     useEffect(() => {
-        if (pathname === ROUTES.ADMIN_MATCHES) setHasNewMatches(false);
+        if (pathname === ROUTES.ADMIN_MATCHES) clearMatchNotification();
     }, [pathname]);
 
     // iOS scroll lock for drawer

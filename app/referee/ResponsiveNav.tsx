@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 import { User, Calendar, MoreHorizontal, X, Sparkles, LayoutDashboard, Users, Briefcase, CheckCircle, Megaphone, ClipboardList, Trophy, Bell, HeadphonesIcon } from "lucide-react";
 import { SignOutButton } from "@/components/auth/SignOutButton";
 import { ROUTES } from "@/lib/routes";
+import { useNotifications } from "@/hooks/useNotifications";
 
 interface ResponsiveNavProps {
     refereeName: string;
@@ -20,33 +21,23 @@ interface ResponsiveNavProps {
 
 export function ResponsiveNav({ refereeName, roleType, basePath = "/referee", titleOverride, isAdminObserver, imageUrl, canSeeMatches = true }: ResponsiveNavProps) {
     const [isMoreOpen, setIsMoreOpen] = useState(false);
-    const [hasNewMatches, setHasNewMatches] = useState(false);
-    const [unreadAnnouncements, setUnreadAnnouncements] = useState(0);
     const pathname = usePathname();
 
-    useEffect(() => {
-        const checkNotifications = async () => {
-            try {
-                const res = await fetch(ROUTES.API_MATCHES_NOTIFICATION);
-                const data = await res.json();
-                setHasNewMatches(data.hasNew);
-
-                const annRes = await fetch(ROUTES.API_ANNOUNCEMENTS_UNREAD);
-                const annData = await annRes.json();
-                setUnreadAnnouncements(annData.count || 0);
-            } catch (e) {
-                // Ignore errors
-            }
-        };
-
-        checkNotifications();
-        const interval = setInterval(checkNotifications, 5 * 60 * 1000);
-        return () => clearInterval(interval);
-    }, []);
+    const {
+        hasNewMatches,
+        unreadAnnouncements,
+        hasNewTicketReply,
+        clearMatchNotification,
+        clearAnnouncementNotification,
+        clearTicketReplyNotification,
+    } = useNotifications({
+        include: { matches: canSeeMatches, announcements: true, tickets: true },
+    });
 
     useEffect(() => {
-        if (pathname.endsWith("/matches")) setHasNewMatches(false);
-        if (pathname.endsWith("/announcements")) setUnreadAnnouncements(0);
+        if (pathname.endsWith("/matches")) clearMatchNotification();
+        if (pathname.endsWith("/announcements")) clearAnnouncementNotification();
+        if (pathname.includes("/ticket")) clearTicketReplyNotification();
     }, [pathname]);
 
     // iOS scroll lock for drawer
@@ -98,7 +89,7 @@ export function ResponsiveNav({ refereeName, roleType, basePath = "/referee", ti
                     <Image src={imageUrl || "/hakem/defaultHakem.png"} alt="BKS Logo" width={32} height={32} className="rounded-full object-cover aspect-square" priority />
                     <span className="font-bold text-lg text-zinc-900 dark:text-white">{title}</span>
                 </div>
-                {hasNewMatches && (
+                {(hasNewMatches || hasNewTicketReply) && (
                     <div className="relative animate-bounce">
                         <Bell className="w-5 h-5 text-red-600 fill-red-600" />
                         <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-600 rounded-full border-2 border-white dark:border-zinc-900"></span>
@@ -350,13 +341,21 @@ export function ResponsiveNav({ refereeName, roleType, basePath = "/referee", ti
                                 <Link
                                     href={`${basePath}/ticket`}
                                     prefetch={false}
-                                    className={`flex items-center gap-3 px-4 py-2.5 rounded-xl font-medium transition-all text-[16px] ${isActive(`${basePath}/ticket`)
+                                    className={`flex items-center justify-between gap-3 px-4 py-2.5 rounded-xl font-medium transition-all text-[16px] ${isActive(`${basePath}/ticket`)
                                         ? "bg-red-700 text-white shadow-md border-l-4 border-red-900 scale-[1.02]"
                                         : "hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 hover:translate-x-1"
                                         }`}
                                 >
-                                    <HeadphonesIcon className="w-4 h-4 text-blue-500" />
-                                    Destek & İletişim
+                                    <div className="flex items-center gap-3">
+                                        <HeadphonesIcon className="w-4 h-4 text-blue-500" />
+                                        Destek & İletişim
+                                    </div>
+                                    {hasNewTicketReply && (
+                                        <div className="relative">
+                                            <Bell className={`w-4 h-4 ${isActive(`${basePath}/ticket`) ? "text-white fill-white" : "text-blue-600 fill-blue-600 animate-pulse"}`} />
+                                            <span className="absolute -top-1 -right-1 w-2 h-2 bg-blue-600 rounded-full border border-white dark:border-zinc-900"></span>
+                                        </div>
+                                    )}
                                 </Link>
 
                                 {isAdminObserver && (
@@ -507,8 +506,13 @@ export function ResponsiveNav({ refereeName, roleType, basePath = "/referee", ti
                             )}
 
                             <Link href={`${basePath}/ticket`} onClick={() => setIsMoreOpen(false)} prefetch={false} className={drawerLink(isActive(`${basePath}/ticket`))}>
-                                <HeadphonesIcon className="w-4 h-4 text-blue-500" />
-                                Destek & İletişim
+                                <div className="flex items-center gap-3 flex-1">
+                                    <HeadphonesIcon className="w-4 h-4 text-blue-500" />
+                                    Destek & İletişim
+                                </div>
+                                {hasNewTicketReply && (
+                                    <span className="w-2 h-2 bg-blue-600 rounded-full" />
+                                )}
                             </Link>
 
                             {isAdminObserver && (
