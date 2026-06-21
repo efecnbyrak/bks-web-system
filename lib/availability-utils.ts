@@ -78,11 +78,14 @@ export const getAvailabilityWindow = cache(async function getAvailabilityWindow(
     // Skipped when admin has manually set the target date via settings panel.
     if (!isManualOverride) {
         while (true) {
-            // Advance only when the target Saturday itself has arrived
-            const rolloverThreshold = new Date(currentTarget);
-            rolloverThreshold.setHours(0, 0, 0, 0);
+            // Advance only after that week's submission deadline has passed (Tuesday 20:30 TRT = 17:30 UTC).
+            // Rolling over on Saturday itself caused currentTarget to jump one week ahead,
+            // making the form appear locked while it should be open (Sun 15:00–Tue 20:30 TRT).
+            const weekDeadline = new Date(currentTarget);
+            weekDeadline.setDate(currentTarget.getDate() - 4); // Tuesday before target Saturday
+            weekDeadline.setHours(17, 30, 0, 0); // 17:30 UTC = 20:30 TRT
 
-            if (today >= rolloverThreshold) {
+            if (today > weekDeadline) {
                 currentTarget.setDate(currentTarget.getDate() + 7);
                 didRolloverTarget = true;
             } else {
