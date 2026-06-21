@@ -4,7 +4,15 @@ import { getAvailabilityWindow } from "@/lib/availability-utils";
 import { sendAvailabilityConfirmationEmail } from "@/lib/email";
 import { verifyMobileToken } from "@/lib/mobile-auth";
 
-const VALID_SLOTS = ["Sabah", "Öğleden Sonra", "Akşam", "Tüm Gün", "Uygun Değil"];
+const VALID_SLOTS = [
+  // Web formatları
+  "Sabah", "Öğleden Sonra", "Akşam", "Tüm Gün", "Uygun Değil",
+  // Mobil formatları — hakem slotları
+  "UYGUNUM",
+  "17:00", "18:30", "20:00", "09:00 - 16:00", "14:00 - 20:00",
+  // Mobil formatları — görevli slotları
+  "09:00-16:30", "16:30-22:00",
+];
 const VALID_REGIONS = ["Avrupa", "Anadolu", "BGM"];
 
 export async function GET(request: NextRequest) {
@@ -125,7 +133,8 @@ export async function POST(request: NextRequest) {
         }
 
         for (const d of days) {
-            if (!VALID_SLOTS.includes(d.slots)) {
+            const parts = d.slots.split(',').map((s: string) => s.trim());
+            if (!parts.every((s: string) => VALID_SLOTS.includes(s))) {
                 return NextResponse.json({ error: `Geçersiz slot: ${d.slots}` }, { status: 400 });
             }
         }
