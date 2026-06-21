@@ -83,7 +83,7 @@ export async function GET(request: NextRequest) {
                 endDate: endDate.toISOString(),
                 deadline: deadline.toISOString(),
                 openTime: openTime.toISOString(),
-                isLocked: isLocked || isSuspended,
+                isLocked,
                 mode,
                 weekNumber,
             },
