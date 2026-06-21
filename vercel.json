@@ -6,7 +6,7 @@
         },
         {
             "path": "/api/cron/availability-close",
-            "schedule": "30 14 * * 2"
+            "schedule": "0 15 * * 2"
         },
         {
             "path": "/api/cron/purge-old-logs",

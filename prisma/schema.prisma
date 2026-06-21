@@ -32,7 +32,8 @@ model User {
   forceRefresh Boolean @default(false)
   lastLoginAt DateTime?
   pendingEmail String?
-  matchStore  Json?     // Stores cumulative matches & sync metadata
+  matchStore        Json?     // Stores cumulative matches & sync metadata
+  matchRefreshQuota Json?     // { count: number, windowStart: string }
   resetPasswordCode String?
   resetPasswordExpiresAt DateTime?
   recoveryCode String? @unique

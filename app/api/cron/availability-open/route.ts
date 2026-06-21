@@ -2,25 +2,14 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { sendPushNotifications } from "@/lib/push-notifications";
 
-async function getSettings() {
-    const defaultSettings = {
-        availabilityOpenTime: "Pazar 12:00",
-        availabilityCloseTime: "Salı 14:30"
-    };
-    try {
-        const rows = await db.systemSetting.findMany({
-            where: {
-                key: { in: ['AVAILABILITY_OPEN_TIME', 'AVAILABILITY_CLOSE_TIME'] }
-            }
-        });
-        const map = Object.fromEntries(rows.map(r => [r.key, r.value]));
-        return {
-            availabilityOpenTime: map['AVAILABILITY_OPEN_TIME'] || defaultSettings.availabilityOpenTime,
-            availabilityCloseTime: map['AVAILABILITY_CLOSE_TIME'] || defaultSettings.availabilityCloseTime
-        };
-    } catch {
-        return defaultSettings;
-    }
+// Mobil backend ile aynı hafta key'ini üretir (Cumartesi tarihi = hafta identifier)
+function getWeekKey(): string {
+    const now = new Date(Date.now() + 3 * 60 * 60 * 1000); // UTC+3 (TRT)
+    const day = now.getDay();
+    const offset = (day - 6 + 7) % 7;
+    const saturday = new Date(now);
+    saturday.setDate(now.getDate() - offset);
+    return saturday.toISOString().slice(0, 10); // "YYYY-MM-DD"
 }
 
 export const dynamic = "force-dynamic";
@@ -35,9 +24,17 @@ export async function GET(req: Request) {
     }
 
     try {
-        const settings = await getSettings();
-        if (!settings.availabilityOpenTime) {
-            return NextResponse.json({ message: "Availability open time not configured" });
+        // Duplicate önleme: Bu hafta zaten açılış bildirimi gönderildiyse atla
+        const KEY_OPEN_SENT = 'AVAIL_OPEN_NOTIF_SENT';
+        const weekKey = getWeekKey();
+
+        const sentSetting = await db.systemSetting.findFirst({
+            where: { key: KEY_OPEN_SENT }
+        });
+
+        if (sentSetting?.value === weekKey) {
+            console.log(`[Cron Open] Bu hafta (${weekKey}) zaten bildirim gönderildi, atlanıyor.`);
+            return NextResponse.json({ skipped: true, message: `Bu hafta (${weekKey}) açılış bildirimi zaten gönderildi.` });
         }
 
         const referees = await db.referee.findMany({
@@ -82,6 +79,17 @@ export async function GET(req: Request) {
             });
         } catch (pushError) {
             console.error("Cron Error (Open) - Push Notification:", pushError);
+        }
+
+        // Gönderim başarılı — bu hafta için işaretle (duplicate önleme)
+        try {
+            await db.systemSetting.upsert({
+                where: { key: KEY_OPEN_SENT },
+                create: { key: KEY_OPEN_SENT, value: weekKey },
+                update: { value: weekKey },
+            });
+        } catch (e) {
+            console.error("Cron Error (Open) - Setting week key:", e);
         }
 
         const { sendEmailSafe } = await import("@/lib/email");

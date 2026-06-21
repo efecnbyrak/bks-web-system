@@ -2,25 +2,14 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { sendPushNotifications } from "@/lib/push-notifications";
 
-async function getSettings() {
-    const defaultSettings = {
-        availabilityOpenTime: "Pazar 12:00",
-        availabilityCloseTime: "Salı 14:30"
-    };
-    try {
-        const rows = await db.systemSetting.findMany({
-            where: {
-                key: { in: ['AVAILABILITY_OPEN_TIME', 'AVAILABILITY_CLOSE_TIME'] }
-            }
-        });
-        const map = Object.fromEntries(rows.map(r => [r.key, r.value]));
-        return {
-            availabilityOpenTime: map['AVAILABILITY_OPEN_TIME'] || defaultSettings.availabilityOpenTime,
-            availabilityCloseTime: map['AVAILABILITY_CLOSE_TIME'] || defaultSettings.availabilityCloseTime
-        };
-    } catch {
-        return defaultSettings;
-    }
+// Mobil backend ile aynı hafta key'ini üretir (Cumartesi tarihi = hafta identifier)
+function getWeekKey(): string {
+    const now = new Date(Date.now() + 3 * 60 * 60 * 1000); // UTC+3 (TRT)
+    const day = now.getDay();
+    const offset = (day - 6 + 7) % 7;
+    const saturday = new Date(now);
+    saturday.setDate(now.getDate() - offset);
+    return saturday.toISOString().slice(0, 10); // "YYYY-MM-DD"
 }
 
 export const dynamic = "force-dynamic";
@@ -35,9 +24,18 @@ export async function GET(req: Request) {
     }
 
     try {
-        const settings = await getSettings();
-        if (!settings.availabilityCloseTime) {
-            return NextResponse.json({ message: "Availability close time not configured" });
+        // Duplicate önleme: Bu hafta zaten kapanış uyarısı gönderildiyse atla
+        // Mobil backend aynı key'i kullanır — hangisi önce gönderirse key'i yazar, diğeri atlar
+        const KEY_WARNING_SENT = 'AVAIL_30MIN_NOTIF_SENT';
+        const weekKey = getWeekKey();
+
+        const sentSetting = await db.systemSetting.findFirst({
+            where: { key: KEY_WARNING_SENT }
+        });
+
+        if (sentSetting?.value === weekKey) {
+            console.log(`[Cron Close] Bu hafta (${weekKey}) zaten kapanış uyarısı gönderildi, atlanıyor.`);
+            return NextResponse.json({ skipped: true, message: `Bu hafta (${weekKey}) kapanış uyarısı zaten gönderildi.` });
         }
 
         // Get this week's Monday to find active forms
@@ -81,8 +79,8 @@ export async function GET(req: Request) {
         try {
             await db.announcement.create({
                 data: {
-                    subject: "⏰ Uygunluk Formu Kapanmak Üzere",
-                    content: "<p>🔔 Uygunluk formunu doldurmayan görevlilerimiz için form, bugün saat 20:30'da kapanacaktır.</p><p>Görev alabilmek için lütfen formunuzu doldurunuz.</p><p><em>(Not: Formunu dolduran kullanıcılarımız bu mesajı dikkate almayabilirler.)</em></p>",
+                    subject: "⏰ Uygunluk Formu Kapanıyor - 2.5 Saat Kaldı",
+                    content: "<p>🔔 Uygunluk formu bu akşam saat <strong>20:30'da</strong> kapanacaktır.</p><p>Formunuzu doldurmak için yaklaşık <strong>2.5 saatiniz</strong> kalmıştır. Görev alabilmek için lütfen formunuzu doldurunuz.</p><p><em>(Not: Formunu dolduran kullanıcılarımız bu mesajı dikkate almayabilirler.)</em></p>",
                     target: "ALL",
                     sentCount: targetUsers.length
                 }
@@ -113,13 +111,25 @@ export async function GET(req: Request) {
             const tokens = pushTokenRows.map((r) => r.token);
             await sendPushNotifications(tokens, {
                 title: "⏰ Uygunluk Formu Kapanıyor",
-                body: "Form bugün saat 20:30'da kapanacaktır. Lütfen doldurunuz.",
+                body: "Form bu akşam saat 20:30'da kapanacaktır. Doldurmak için yaklaşık 2.5 saatiniz kaldı.",
                 data: { type: "AVAILABILITY" },
                 sound: "default",
                 channelId: "availability",
             });
         } catch (pushError) {
             console.error("Cron Error (Close) - Push Notification:", pushError);
+        }
+
+        // Gönderim başarılı — bu hafta için işaretle (duplicate önleme)
+        // Mobil backend bu key'i görecek ve aynı haftayı tekrar göndermeyecek
+        try {
+            await db.systemSetting.upsert({
+                where: { key: KEY_WARNING_SENT },
+                create: { key: KEY_WARNING_SENT, value: weekKey },
+                update: { value: weekKey },
+            });
+        } catch (e) {
+            console.error("Cron Error (Close) - Setting week key:", e);
         }
 
         const { sendEmailSafe } = await import("@/lib/email");
@@ -137,10 +147,10 @@ export async function GET(req: Request) {
                 if (!user.email) return;
                 const html = `
                     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; padding: 20px;">
-                        <h2 style="color: #ea580c; text-transform: uppercase;">Uygunluk Formu Kapanmak Uzere</h2>
+                        <h2 style="color: #ea580c; text-transform: uppercase;">Uygunluk Formu Kapaniyor - 2.5 Saat Kaldi</h2>
                         <p>Sayin <strong>${esc(user.firstName)} ${esc(user.lastName)}</strong>,</p>
                         <p>Önümüzdeki hafta için uygunluk formunu <strong>henüz doldurmadığınızı</strong> fark ettik.</p>
-                        <p>Form, bugün saat <strong>20:30'da</strong> kapanacaktır. Görev alabilmek için lütfen formunuzu doldurunuz.</p>
+                        <p>Form, bu akşam saat <strong>20:30'da</strong> kapanacaktır. Görev alabilmek için yaklaşık <strong>2.5 saatiniz</strong> kalmıştır.</p>
                         <div style="margin: 30px 0; text-align: center;">
                             <a href="${process.env.NEXT_PUBLIC_APP_URL}/login" style="background-color: #ea580c; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Hemen Doldur</a>
                         </div>

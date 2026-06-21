@@ -102,8 +102,7 @@ const ROLE_CONFIG = {
 type FilterMode = "all" | "played" | "upcoming" | "okul" | "ozel" | "hafta";
 
 const MATCHES_CACHE_KEY = "matchesCache_v1";
-const MATCHES_REFRESH_KEY = "matchesLastRefresh";
-const COOLDOWN_MS = 60 * 60 * 1000; // 1 saat
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 dakika cache geçerlilik
 
 interface MatchesCache {
     matches: MatchData[];
@@ -117,7 +116,7 @@ function loadCachedMatches(): MatchesCache | null {
         const raw = localStorage.getItem(MATCHES_CACHE_KEY);
         if (!raw) return null;
         const parsed: MatchesCache = JSON.parse(raw);
-        if (Date.now() - parsed.cachedAt > COOLDOWN_MS) return null;
+        if (Date.now() - parsed.cachedAt > CACHE_TTL_MS) return null;
         return parsed;
     } catch {
         return null;
@@ -134,22 +133,12 @@ function saveCachedMatches(matches: MatchData[], lastSync: string | null) {
     }
 }
 
-function getCooldownRemaining(): number {
-    if (typeof window === "undefined") return 0;
-    try {
-        const last = localStorage.getItem(MATCHES_REFRESH_KEY);
-        if (!last) return 0;
-        const elapsed = Date.now() - parseInt(last, 10);
-        return Math.max(0, COOLDOWN_MS - elapsed);
-    } catch {
-        return 0;
-    }
-}
-
-function formatCooldown(ms: number): string {
-    const minutes = Math.ceil(ms / 60000);
-    if (minutes >= 60) return "1 saat";
-    return `${minutes} dk`;
+function formatCountdown(ms: number): string {
+    const totalSec = Math.ceil(ms / 1000);
+    const min = Math.floor(totalSec / 60);
+    const sec = totalSec % 60;
+    if (min > 0) return `${min}:${String(sec).padStart(2, "0")}`;
+    return `0:${String(sec).padStart(2, "0")}`;
 }
 
 export function MatchesClient({ firstName, lastName, initialMatches = [], initialLastSync = null, initialPersonnelPhones = {} }: MatchesClientProps) {
@@ -168,18 +157,9 @@ export function MatchesClient({ firstName, lastName, initialMatches = [], initia
     const [lastSync, setLastSync] = useState<string | null>(cached?.lastSync ?? initialLastSync);
     const [visibleCount, setVisibleCount] = useState(30);
     const filterSectionRef = useRef<HTMLDivElement>(null);
-    const [cooldownRemaining, setCooldownRemaining] = useState(() => getCooldownRemaining());
-
-    // Cooldown sayacı — her dakika günceller
-    useEffect(() => {
-        if (cooldownRemaining <= 0) return;
-        const interval = setInterval(() => {
-            const remaining = getCooldownRemaining();
-            setCooldownRemaining(remaining);
-            if (remaining <= 0) clearInterval(interval);
-        }, 30000);
-        return () => clearInterval(interval);
-    }, [cooldownRemaining]);
+    const [quotaBlocked, setQuotaBlocked] = useState(false);
+    const [showQuotaPopup, setShowQuotaPopup] = useState(false);
+    const [retryAfterMs, setRetryAfterMs] = useState(0);
 
     // Filter states
     const [searchQuery, setSearchQuery] = useState("");
@@ -205,8 +185,17 @@ export function MatchesClient({ firstName, lastName, initialMatches = [], initia
         setError("");
 
         try {
-            const res = await fetch("/api/matches");
+            const url = manualRefresh ? "/api/matches?manual=true" : "/api/matches";
+            const res = await fetch(url);
             const data = await res.json();
+
+            if (res.status === 429) {
+                // Quota aşıldı — popup aç
+                setRetryAfterMs(data.retryAfterMs ?? 300_000);
+                setQuotaBlocked(true);
+                setShowQuotaPopup(true);
+                return;
+            }
 
             if (res.ok) {
                 const matches = dedupeMatches(data.matches || []);
@@ -214,10 +203,6 @@ export function MatchesClient({ firstName, lastName, initialMatches = [], initia
                 setAllMatches(matches);
                 setLastSync(sync);
                 saveCachedMatches(matches, sync);
-                if (manualRefresh) {
-                    localStorage.setItem(MATCHES_REFRESH_KEY, Date.now().toString());
-                    setCooldownRemaining(COOLDOWN_MS);
-                }
             } else {
                 setError(data.error || "Maç verileri yüklenemedi.");
             }
@@ -1024,6 +1009,18 @@ export function MatchesClient({ firstName, lastName, initialMatches = [], initia
     // ============================================================
     return (
         <div className="space-y-5">
+            {/* Quota Popup */}
+            {showQuotaPopup && (
+                <QuotaPopup
+                    retryAfterMs={retryAfterMs}
+                    onClose={() => setShowQuotaPopup(false)}
+                    onExpired={() => {
+                        setQuotaBlocked(false);
+                        setShowQuotaPopup(false);
+                    }}
+                />
+            )}
+
             {/* Refresh Success Toast */}
             {refreshSuccess && (
                 <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-4 fade-in duration-300">
@@ -1099,19 +1096,17 @@ export function MatchesClient({ firstName, lastName, initialMatches = [], initia
 
                     <div className="flex flex-col items-end gap-0.5">
                         <button
-                            onClick={() => { if (!refreshing && cooldownRemaining <= 0) loadMatches(true, true); }}
-                            disabled={refreshing || cooldownRemaining > 0}
-                            title={cooldownRemaining > 0 ? `${formatCooldown(cooldownRemaining)} sonra yenileyebilirsiniz` : "Maçlarımı yenile"}
+                            onClick={() => {
+                                if (quotaBlocked) { setShowQuotaPopup(true); return; }
+                                if (!refreshing) loadMatches(true, true);
+                            }}
+                            disabled={refreshing}
+                            title="Maçlarımı yenile"
                             className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white rounded-xl text-sm font-bold shadow-lg shadow-red-600/20 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                         >
                             <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
                             <span className="hidden sm:inline">{refreshing ? "Yükleniyor" : "Yenile"}</span>
                         </button>
-                        {cooldownRemaining > 0 && (
-                            <span className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 pr-1">
-                                {formatCooldown(cooldownRemaining)} sonra
-                            </span>
-                        )}
                     </div>
                 </div>
             </div>
@@ -1493,6 +1488,71 @@ function PersonnelCard({ icon, title, people, firstName, lastName, highlight, ph
                         </div>
                     );
                 })}
+            </div>
+        </div>
+    );
+}
+
+// ─── Quota Popup ─────────────────────────────────────────────────────────────
+
+function QuotaPopup({
+    retryAfterMs,
+    onClose,
+    onExpired,
+}: {
+    retryAfterMs: number;
+    onClose: () => void;
+    onExpired: () => void;
+}) {
+    const [msLeft, setMsLeft] = useState(retryAfterMs);
+
+    useEffect(() => {
+        if (msLeft <= 0) { onExpired(); return; }
+        const interval = setInterval(() => {
+            setMsLeft(prev => {
+                const next = prev - 1000;
+                if (next <= 0) { clearInterval(interval); onExpired(); return 0; }
+                return next;
+            });
+        }, 1000);
+        return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    return (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="bg-white dark:bg-zinc-900 rounded-2xl p-6 shadow-2xl max-w-sm w-full mx-4 border border-zinc-200 dark:border-zinc-700 animate-in zoom-in-95 duration-200">
+                <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                            <Clock className="w-5 h-5 text-red-600" />
+                        </div>
+                        <h3 className="font-bold text-lg text-zinc-900 dark:text-white">Yenileme Limiti</h3>
+                    </div>
+                    <button
+                        onClick={onClose}
+                        className="p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-400 transition-colors"
+                    >
+                        ✕
+                    </button>
+                </div>
+
+                <p className="text-zinc-500 dark:text-zinc-400 text-sm mb-5 leading-relaxed">
+                    Manuel yenileme hakkınızı kullandınız. Otomatik yenileme arka planda devam ediyor. Yeniden yenileyebilmek için lütfen bekleyin.
+                </p>
+
+                <div className="flex items-center justify-center py-4 mb-5 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl">
+                    <span className="text-5xl font-mono font-bold text-red-600 tracking-wider tabular-nums">
+                        {formatCountdown(msLeft)}
+                    </span>
+                </div>
+
+                <button
+                    onClick={onClose}
+                    className="w-full py-2.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 font-semibold text-sm transition-colors"
+                >
+                    Tamam
+                </button>
             </div>
         </div>
     );

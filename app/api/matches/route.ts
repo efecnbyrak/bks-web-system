@@ -1,14 +1,28 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { db } from "@/lib/db";
+import { checkAndIncrementRefreshQuota } from "@/lib/match-refresh-quota";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
     try {
         const session = await getSession();
         if (!session?.userId) {
             return NextResponse.json({ error: "Oturum bulunamadı." }, { status: 401 });
+        }
+
+        // Manuel yenileme ise quota kontrol et
+        const isManual = req.nextUrl.searchParams.get("manual") === "true";
+        if (isManual) {
+            const quota = await checkAndIncrementRefreshQuota(session.userId);
+            if (!quota.allowed) {
+                const blocked = quota as { allowed: false; retryAfterMs: number };
+                return NextResponse.json(
+                    { error: "quota_exceeded", retryAfterMs: blocked.retryAfterMs },
+                    { status: 429 }
+                );
+            }
         }
 
         const [assignments, syncState] = await Promise.all([

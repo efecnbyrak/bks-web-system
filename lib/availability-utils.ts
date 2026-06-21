@@ -7,9 +7,9 @@ import { getAllSettings } from "@/lib/settings-cache";
 // `cache()` deduplicates calls within a single server render tree —
 // multiple server components on the same page share one DB fetch.
 export const getAvailabilityWindow = cache(async function getAvailabilityWindow() {
-    // 0. Get current time in Turkey Time (TRT - UTC+3)
-    const trtDateStr = new Date().toLocaleString("en-US", { timeZone: "Europe/Istanbul" });
-    const today = new Date(trtDateStr);
+    // Sunucu UTC'de çalışır. openTime/deadline zaten UTC'de set edilir (setHours = UTC).
+    // today de UTC olmalı — locale dönüşümü parse hatası yaratır.
+    const today = new Date();
 
     // 1. Get settings from DB — single batched query via settings-cache
     let storedTargetDate: Date | null = null;

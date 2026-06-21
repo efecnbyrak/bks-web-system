@@ -1,12 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { verifyMobileToken } from "@/lib/mobile-auth";
+import { checkAndIncrementRefreshQuota } from "@/lib/match-refresh-quota";
 
 export async function GET(req: NextRequest) {
     const auth = await verifyMobileToken(req);
     if (!auth) {
         console.warn("[mobile/v2/matches] 401 — verifyMobileToken returned null");
         return NextResponse.json({ error: "Yetkisiz erişim." }, { status: 401 });
+    }
+
+    // Manuel yenileme ise quota kontrol et
+    const isManual = req.nextUrl.searchParams.get("manual") === "true";
+    if (isManual) {
+        const quota = await checkAndIncrementRefreshQuota(auth.userId);
+        if (!quota.allowed) {
+            const blocked = quota as { allowed: false; retryAfterMs: number };
+            return NextResponse.json(
+                { error: "quota_exceeded", retryAfterMs: blocked.retryAfterMs },
+                { status: 429 }
+            );
+        }
     }
 
     try {
