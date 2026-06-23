@@ -26,10 +26,11 @@ const RoleIcon = ({ type }: { type: string }) => {
 };
 
 interface OfficialCardProps {
-    official: any; // Using any for now to avoid deep type issues with Prisma include, or refine type
+    official: any;
+    currentUserRole?: string | null;
 }
 
-export function OfficialCard({ official }: OfficialCardProps) {
+export function OfficialCard({ official, currentUserRole }: OfficialCardProps) {
     // Placeholder logic
     // TODO: Update image source to pull from specific folders based on ID or Name
     // Example: /hakem/${official.id}.jpg or /genel/${official.id}.jpg
@@ -73,7 +74,7 @@ export function OfficialCard({ official }: OfficialCardProps) {
             {/* Actions */}
             <div className="w-full mt-auto pt-2 border-t border-zinc-100 dark:border-zinc-800 flex justify-between items-center">
                 <div className="flex items-center gap-1.5">
-                    <DeleteRefereeButton refereeId={official.id} />
+                    <DeleteRefereeButton refereeId={official.id} currentUserRole={currentUserRole} />
                     <SuspendRefereeButton userId={official.userId} suspendedUntil={official.user?.suspendedUntil} />
                 </div>
 

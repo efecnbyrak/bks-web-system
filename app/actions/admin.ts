@@ -6,9 +6,8 @@ import { revalidatePath } from "next/cache";
 
 export async function deleteReferee(refereeId: number) {
     const session = await verifySession();
-    const adminRoles = ["ADMIN", "SUPER_ADMIN", "ADMIN_IHK"];
-    if (!adminRoles.includes(session.role)) {
-        return { error: "Yetkisiz işlem." };
+    if (session.role !== "SUPER_ADMIN") {
+        return { error: "Bu işlem için Süper Admin yetkisi gereklidir." };
     }
 
     try {

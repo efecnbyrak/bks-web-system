@@ -6,9 +6,11 @@ import { deleteReferee } from "@/app/actions/admin";
 
 interface DeleteRefereeButtonProps {
     refereeId: number;
+    currentUserRole?: string | null;
 }
 
-export function DeleteRefereeButton({ refereeId }: DeleteRefereeButtonProps) {
+export function DeleteRefereeButton({ refereeId, currentUserRole }: DeleteRefereeButtonProps) {
+    if (currentUserRole !== "SUPER_ADMIN") return null;
     const [status, setStatus] = useState<"idle" | "confirm" | "deleting">("idle");
 
     const handleClick = async () => {
