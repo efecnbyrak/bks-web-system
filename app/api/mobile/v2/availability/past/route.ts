@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
         }
 
         const twoWeeksAgo = new Date();
-        twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+        twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 21);
 
         const forms = await db.availabilityForm.findMany({
             where: {

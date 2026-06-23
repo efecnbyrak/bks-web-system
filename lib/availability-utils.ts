@@ -53,14 +53,14 @@ export const getAvailabilityWindow = cache(async function getAvailabilityWindow(
     }
     storedTargetDate.setUTCHours(0, 0, 0, 0);
 
-    // Auto-expire manual override when that week's form has already closed (Tuesday 20:30).
+    // Auto-expire manual override when the display rollover threshold passes (Friday 00:00 TRT = Thursday 21:00 UTC).
     // This prevents the manual flag from permanently blocking auto-rollover.
     let didManualExpired = false;
     if (isManualOverride) {
-        const manualWeekDeadline = new Date(storedTargetDate);
-        manualWeekDeadline.setUTCDate(storedTargetDate.getUTCDate() - 4); // Tuesday before target Saturday
-        manualWeekDeadline.setUTCHours(17, 30, 0, 0); // 17:30 UTC = 20:30 TRT
-        if (today > manualWeekDeadline) {
+        const manualWeekRollover = new Date(storedTargetDate);
+        manualWeekRollover.setUTCDate(storedTargetDate.getUTCDate() - 1); // Friday before target Saturday
+        manualWeekRollover.setUTCHours(21, 0, 0, 0); // 21:00 UTC = 00:00 TRT (Friday)
+        if (today > manualWeekRollover) {
             isManualOverride = false;
             didManualExpired = true;
         }
@@ -72,18 +72,18 @@ export const getAvailabilityWindow = cache(async function getAvailabilityWindow(
     let didRolloverTarget = false;
     let didRolloverWeek = false;
 
-    // 1. Rollover for Target Date (on the Saturday itself)
+    // 1. Rollover for Target Date
     // Skipped when admin has manually set the target date via settings panel.
+    // Rolls over on Friday 00:00 TRT (Thursday 21:00 UTC) — NOT at Tuesday 20:30 deadline.
+    // The form closes at Tuesday 20:30 but the admin view stays on the current week
+    // until Friday 00:00, giving admins Wed/Thu to review submissions before the week flips.
     if (!isManualOverride) {
         while (true) {
-            // Advance only after that week's submission deadline has passed (Tuesday 20:30 TRT = 17:30 UTC).
-            // Rolling over on Saturday itself caused currentTarget to jump one week ahead,
-            // making the form appear locked while it should be open (Sun 15:00–Tue 20:30 TRT).
-            const weekDeadline = new Date(currentTarget);
-            weekDeadline.setUTCDate(currentTarget.getUTCDate() - 4); // Tuesday before target Saturday
-            weekDeadline.setUTCHours(17, 30, 0, 0); // 17:30 UTC = 20:30 TRT
+            const weekRollover = new Date(currentTarget);
+            weekRollover.setUTCDate(currentTarget.getUTCDate() - 1); // Friday before target Saturday
+            weekRollover.setUTCHours(21, 0, 0, 0); // 21:00 UTC = 00:00 TRT (Friday)
 
-            if (today > weekDeadline) {
+            if (today > weekRollover) {
                 currentTarget.setUTCDate(currentTarget.getUTCDate() + 7);
                 didRolloverTarget = true;
             } else {

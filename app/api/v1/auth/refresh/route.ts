@@ -89,8 +89,11 @@ export async function POST(request: NextRequest) {
             classification: profile?.classification ?? null,
             iban: profile?.iban ?? null,
             address: profile?.address ?? null,
+            imageUrl: profile?.imageUrl ?? null,
+            officialType: profile?.officialType ?? null,
             isApproved: user.isApproved,
             isActive: user.isActive,
+            recoveryCode: user.recoveryCode ?? null,
         };
 
         return NextResponse.json({ success: true, token: newToken, user: userResponse });
