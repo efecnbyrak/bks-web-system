@@ -178,9 +178,7 @@ export async function saveAvailability(prevState: ActionState, formData: FormDat
                 day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
             });
 
-            const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL
-                ? `https://${process.env.VERCEL_URL}`
-                : 'http://localhost:3000';
+            const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.basketbolkoordinasyonsistemi.com.tr';
             const formUrl = isOfficial ? `${appUrl}/general/availability` : `${appUrl}/referee/availability`;
 
             await sendAvailabilityConfirmationEmail(

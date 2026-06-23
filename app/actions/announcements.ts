@@ -92,14 +92,11 @@ export async function sendAnnouncement(subject: string, content: string, target:
                 ) combined
             `;
         } else {
-            recipients = await db.$queryRaw<Array<{ email: string }>>`
-                SELECT email FROM (
-                    SELECT email, 'REFEREE' as "officialType" FROM referees WHERE email IS NOT NULL
-                    UNION ALL
-                    SELECT email, "officialType" FROM general_officials WHERE email IS NOT NULL
-                ) combined
-                WHERE "officialType" = ${target}
-            `;
+            const officialRows = await db.generalOfficial.findMany({
+                where: { officialType: target, email: { not: null } },
+                select: { email: true },
+            });
+            recipients = officialRows.filter((r): r is { email: string } => r.email !== null);
         }
 
         if (recipients.length === 0) {
@@ -167,7 +164,7 @@ export async function sendAnnouncement(subject: string, content: string, target:
         const sanitizedSubject = sanitizeHtml(subject, { allowedTags: [], allowedAttributes: {} });
         const sanitizedContent = sanitizeHtml(content, DB_SANITIZE_OPTIONS);
 
-        await db.announcement.create({
+        const announcementRecord = await db.announcement.create({
             data: {
                 subject: sanitizedSubject,
                 content: sanitizedContent,
@@ -178,6 +175,7 @@ export async function sendAnnouncement(subject: string, content: string, target:
         });
 
         // Push notifications — find target user IDs then their push tokens
+        const isPersonal = specificUserIds && specificUserIds.length > 0;
         try {
             let targetUserIds: number[] = [];
             if (specificUserIds && specificUserIds.length > 0) {
@@ -200,9 +198,9 @@ export async function sendAnnouncement(subject: string, content: string, target:
                 const tokens = pushTokenRows.map(r => r.token);
                 if (tokens.length > 0) {
                     await sendPushNotifications(tokens, {
-                        title: "📢 Yeni Duyuru",
+                        title: isPersonal ? "📩 Bana Özel Duyuru" : "📢 Yeni Duyuru",
                         body: sanitizedSubject,
-                        data: { type: "ANNOUNCEMENT" },
+                        data: { type: "ANNOUNCEMENT", isPersonal: !!isPersonal, refId: announcementRecord.id },
                         sound: "default",
                         channelId: "announcements",
                     });

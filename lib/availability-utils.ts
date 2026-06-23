@@ -1,4 +1,3 @@
-import { getDay } from "date-fns";
 import { cache } from "react";
 import { db } from "@/lib/db";
 import { getAllSettings } from "@/lib/settings-cache";
@@ -38,30 +37,29 @@ export const getAvailabilityWindow = cache(async function getAvailabilityWindow(
     }
 
     // Default to 'current' Saturday if nothing stored
-    // Default to 'current' Saturday if nothing stored
     // This finds the Saturday that just passed (or today if it is Saturday)
     if (!storedTargetDate) {
-        const currentDay = getDay(today);
+        const currentDay = today.getUTCDay();
         const offset = (currentDay - 6 + 7) % 7;
         storedTargetDate = new Date(today);
-        storedTargetDate.setDate(today.getDate() - offset);
+        storedTargetDate.setUTCDate(today.getUTCDate() - offset);
     }
 
     // CRITICAL: Ensure storedTargetDate is ALWAYS a Saturday
-    const dayOfStored = getDay(storedTargetDate);
+    const dayOfStored = storedTargetDate.getUTCDay();
     if (dayOfStored !== 6) {
         const backOffset = (dayOfStored - 6 + 7) % 7;
-        storedTargetDate.setDate(storedTargetDate.getDate() - backOffset);
+        storedTargetDate.setUTCDate(storedTargetDate.getUTCDate() - backOffset);
     }
-    storedTargetDate.setHours(0, 0, 0, 0);
+    storedTargetDate.setUTCHours(0, 0, 0, 0);
 
     // Auto-expire manual override when that week's form has already closed (Tuesday 20:30).
     // This prevents the manual flag from permanently blocking auto-rollover.
     let didManualExpired = false;
     if (isManualOverride) {
         const manualWeekDeadline = new Date(storedTargetDate);
-        manualWeekDeadline.setDate(storedTargetDate.getDate() - 4); // Tuesday before target Saturday
-        manualWeekDeadline.setHours(17, 30, 0, 0); // 17:30 UTC = 20:30 TRT
+        manualWeekDeadline.setUTCDate(storedTargetDate.getUTCDate() - 4); // Tuesday before target Saturday
+        manualWeekDeadline.setUTCHours(17, 30, 0, 0); // 17:30 UTC = 20:30 TRT
         if (today > manualWeekDeadline) {
             isManualOverride = false;
             didManualExpired = true;
@@ -82,11 +80,11 @@ export const getAvailabilityWindow = cache(async function getAvailabilityWindow(
             // Rolling over on Saturday itself caused currentTarget to jump one week ahead,
             // making the form appear locked while it should be open (Sun 15:00–Tue 20:30 TRT).
             const weekDeadline = new Date(currentTarget);
-            weekDeadline.setDate(currentTarget.getDate() - 4); // Tuesday before target Saturday
-            weekDeadline.setHours(17, 30, 0, 0); // 17:30 UTC = 20:30 TRT
+            weekDeadline.setUTCDate(currentTarget.getUTCDate() - 4); // Tuesday before target Saturday
+            weekDeadline.setUTCHours(17, 30, 0, 0); // 17:30 UTC = 20:30 TRT
 
             if (today > weekDeadline) {
-                currentTarget.setDate(currentTarget.getDate() + 7);
+                currentTarget.setUTCDate(currentTarget.getUTCDate() + 7);
                 didRolloverTarget = true;
             } else {
                 break;
@@ -94,14 +92,12 @@ export const getAvailabilityWindow = cache(async function getAvailabilityWindow(
         }
     }
 
-    // 2. Rollover for Week Number (Monday 00:00)
+    // 2. Rollover for Week Number (Monday 00:00 UTC)
     // Use YYYY-MM-DD to avoid ISO timezone shifts causing double-increments
-
-    // Current Monday in YYYY-MM-DD according to TRT
-    const day = today.getDay();
+    const day = today.getUTCDay();
     const diff = (day === 0 ? 6 : day - 1);
     const monday = new Date(today);
-    monday.setDate(today.getDate() - diff);
+    monday.setUTCDate(today.getUTCDate() - diff);
     const mondayKey = monday.toISOString().split('T')[0];
 
     if (lastWeekRolloverKey !== mondayKey) {
@@ -147,21 +143,21 @@ export const getAvailabilityWindow = cache(async function getAvailabilityWindow(
     // 2. Window Calculations (Strictly Anchored to Saturday)
     // currentTarget is the Saturday of the OPERATIONAL week.
     const startDate = new Date(currentTarget);
-    startDate.setHours(0, 0, 0, 0);
+    startDate.setUTCHours(0, 0, 0, 0);
 
     const endDate = new Date(currentTarget);
-    endDate.setDate(currentTarget.getDate() + 6); // Friday
-    endDate.setHours(20, 59, 59, 999); // 20:59:59 UTC = 23:59:59 TRT (aynı gün kalır)
+    endDate.setUTCDate(currentTarget.getUTCDate() + 6); // Friday
+    endDate.setUTCHours(20, 59, 59, 999); // 20:59:59 UTC = 23:59:59 TRT (aynı gün kalır)
 
     // Opening: Sunday BEFORE the operational week (currentTarget - 6 days)
     const openTime = new Date(currentTarget);
-    openTime.setDate(currentTarget.getDate() - 6);
-    openTime.setHours(12, 0, 0, 0); // 12:00 UTC = 15:00 TRT
+    openTime.setUTCDate(currentTarget.getUTCDate() - 6);
+    openTime.setUTCHours(12, 0, 0, 0); // 12:00 UTC = 15:00 TRT
 
     // Closing: Tuesday OF the current submission week (currentTarget - 4 days)
     const deadline = new Date(currentTarget);
-    deadline.setDate(currentTarget.getDate() - 4);
-    deadline.setHours(17, 30, 0, 0); // 17:30 UTC = 20:30 TRT
+    deadline.setUTCDate(currentTarget.getUTCDate() - 4);
+    deadline.setUTCHours(17, 30, 0, 0); // 17:30 UTC = 20:30 TRT
 
     // 3. Lock Status
     let isLocked = today < openTime || today > deadline;

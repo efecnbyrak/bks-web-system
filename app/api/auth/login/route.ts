@@ -65,6 +65,10 @@ export async function POST(request: NextRequest) {
             }
         } catch (e) {
             console.warn("[API/LOGIN] Rate limit check warning:", (e as any)?.message);
+            return NextResponse.json(
+                { error: "Giriş servisi geçici olarak kullanılamıyor. Lütfen daha sonra tekrar deneyin." },
+                { status: 503 }
+            );
         }
 
         // Find user
@@ -133,6 +137,10 @@ export async function POST(request: NextRequest) {
         });
 
         // Create JWT token for mobile
+        if (!user.role?.name) {
+            console.error("[API/LOGIN] User has no role assigned:", user.id);
+            return NextResponse.json({ error: "Hesabınıza rol atanmamıştır. Yönetici ile iletişime geçin." }, { status: 403 });
+        }
         const token = await createMobileToken(user.id, user.role.name);
 
         // Store SHA-256 hash of token in DB for DB-backed verification
@@ -149,11 +157,17 @@ export async function POST(request: NextRequest) {
             id: user.id,
             username: user.username,
             role: user.role.name,
-            firstName: profile?.firstName || null,
-            lastName: profile?.lastName || null,
-            email: profile?.email || null,
-            phone: profile?.phone || null,
-            classification: profile?.classification || null,
+            firstName: profile?.firstName ?? null,
+            lastName: profile?.lastName ?? null,
+            email: profile?.email ?? null,
+            phone: profile?.phone ?? null,
+            classification: profile?.classification ?? null,
+            iban: profile?.iban ?? null,
+            address: profile?.address ?? null,
+            imageUrl: profile?.imageUrl ?? null,
+            officialType: user.official?.officialType ?? null,
+            isApproved: user.isApproved,
+            isActive: user.isActive,
         };
 
         return NextResponse.json({

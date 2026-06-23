@@ -46,34 +46,38 @@ export async function GET(req: Request) {
         nextMonday.setDate(diff + 7);
         nextMonday.setHours(0, 0, 0, 0);
 
-        // Find all users who HAVEN'T submitted this week's form yet
+        // Find all eligible users who HAVEN'T submitted this week's form yet.
+        // Single query: fetch submitted refereeIds/officialIds, then load unsubmitted
+        // users with their push tokens in one go — eliminates 4 separate N+1 queries.
         const submittedForms = await db.availabilityForm.findMany({
+            where: { weekStartDate: nextMonday },
+            select: { refereeId: true, officialId: true },
+        });
+
+        const submittedRefereeIds = submittedForms.map(f => f.refereeId).filter((id): id is number => id != null);
+        const submittedOfficialIds = submittedForms.map(f => f.officialId).filter((id): id is number => id != null);
+
+        // One query to get all unsubmitted eligible users with their push tokens
+        const unsubmittedUsers = await db.user.findMany({
             where: {
-                weekStartDate: nextMonday
+                isActive: true,
+                isApproved: true,
+                OR: [
+                    { referee: { id: { notIn: submittedRefereeIds } } },
+                    { official: { id: { notIn: submittedOfficialIds } } },
+                ],
             },
-            select: { refereeId: true, officialId: true }
+            select: {
+                id: true,
+                referee: { select: { email: true, firstName: true, lastName: true } },
+                official: { select: { email: true, firstName: true, lastName: true } },
+                pushTokens: { select: { token: true } },
+            },
         });
 
-        const submittedRefereeIds = submittedForms.map(f => f.refereeId).filter(Boolean);
-        const submittedOfficialIds = submittedForms.map(f => f.officialId).filter(Boolean);
-
-        const unsubmittedReferees = await db.referee.findMany({
-            where: {
-                email: { not: null },
-                id: { notIn: submittedRefereeIds as number[] }
-            } as any,
-            select: { email: true, firstName: true, lastName: true },
-        });
-
-        const unsubmittedOfficials = await db.generalOfficial.findMany({
-            where: {
-                email: { not: null },
-                id: { notIn: submittedOfficialIds as number[] }
-            } as any,
-            select: { email: true, firstName: true, lastName: true },
-        });
-
-        const targetUsers = [...unsubmittedReferees, ...unsubmittedOfficials].filter(u => !!u.email);
+        const targetUsers = unsubmittedUsers
+            .map(u => u.referee ?? u.official)
+            .filter((p): p is { email: string | null; firstName: string; lastName: string } => p != null && !!p.email);
 
         // --- ANNOUNCEMENT IN-APP ---
         try {
@@ -90,32 +94,18 @@ export async function GET(req: Request) {
             console.error("Cron Error (Close) - Announcement Creation:", announcementError);
         }
 
-        // Push bildirimleri gönder (sadece formu doldurmayanlara)
+        // Push bildirimleri gönder (sadece formu doldurmayanlara) — tokens already loaded above
         try {
-            const unsubmittedUserIds: number[] = [];
-            const unsubRefereesFull = await db.referee.findMany({
-                where: { id: { notIn: submittedRefereeIds as number[] } } as any,
-                select: { userId: true },
-            });
-            const unsubOfficialsFull = await db.generalOfficial.findMany({
-                where: { id: { notIn: submittedOfficialIds as number[] } } as any,
-                select: { userId: true },
-            });
-            unsubRefereesFull.forEach(r => { if ((r as any).userId) unsubmittedUserIds.push((r as any).userId); });
-            unsubOfficialsFull.forEach(o => { if ((o as any).userId) unsubmittedUserIds.push((o as any).userId); });
-
-            const pushTokenRows = await db.pushToken.findMany({
-                where: unsubmittedUserIds.length > 0 ? { userId: { in: unsubmittedUserIds } } : {},
-                select: { token: true },
-            });
-            const tokens = pushTokenRows.map((r) => r.token);
-            await sendPushNotifications(tokens, {
-                title: "⏰ Uygunluk Formu Kapanıyor",
-                body: "Form bu akşam saat 20:30'da kapanacaktır. Doldurmak için yaklaşık 2.5 saatiniz kaldı.",
-                data: { type: "AVAILABILITY" },
-                sound: "default",
-                channelId: "availability",
-            });
+            const tokens = unsubmittedUsers.flatMap(u => u.pushTokens.map(pt => pt.token));
+            if (tokens.length > 0) {
+                await sendPushNotifications(tokens, {
+                    title: "⏰ Uygunluk Formu Kapanıyor",
+                    body: "Form bu akşam saat 20:30'da kapanacaktır. Doldurmak için yaklaşık 2.5 saatiniz kaldı.",
+                    data: { type: "AVAILABILITY" },
+                    sound: "default",
+                    channelId: "availability",
+                });
+            }
         } catch (pushError) {
             console.error("Cron Error (Close) - Push Notification:", pushError);
         }
