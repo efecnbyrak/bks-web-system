@@ -399,7 +399,7 @@ export function RefereeListClient({ initialReferees, refereeTypeMap, currentUser
                                                 ...ref,
                                                 officialType: refereeTypeMap[ref.id] || "REFEREE"
                                             }}
-                                            isSuperAdmin={["SUPER_ADMIN", "ADMIN", "ADMIN_IHK"].includes(currentUserRole)}
+                                            isSuperAdmin={currentUserRole === "SUPER_ADMIN"}
                                             onClick={() => setSelectedOfficial({
                                                 ...ref,
                                                 officialType: refereeTypeMap[ref.id] || "REFEREE"
@@ -430,7 +430,7 @@ export function RefereeListClient({ initialReferees, refereeTypeMap, currentUser
             {selectedOfficial && (
                 <ProfileDetailModal
                     official={selectedOfficial}
-                    isSuperAdmin={["SUPER_ADMIN", "ADMIN", "ADMIN_IHK"].includes(currentUserRole)}
+                    isSuperAdmin={currentUserRole === "SUPER_ADMIN"}
                     currentUserEmail={currentUserEmail}
                     onClose={() => setSelectedOfficial(null)}
                     onToggleActive={() => handleToggleStatus(selectedOfficial.user?.id)}
