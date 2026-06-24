@@ -42,16 +42,13 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-    console.log('[SECURITY POST] istek geldi, Authorization:', request.headers.get('authorization')?.slice(0, 30));
     const auth = await verifyMobileToken(request);
-    console.log('[SECURITY POST] auth sonucu:', auth);
     if (!auth) {
         return NextResponse.json({ error: "Yetkisiz erişim." }, { status: 401 });
     }
 
     try {
         const body = await request.json();
-        console.log('[SECURITY POST] userId:', auth.userId, 'question:', body?.question?.slice(0, 30));
         const question: string = (body.question ?? "").trim();
         const answer: string = (body.answer ?? "").trim();
 
