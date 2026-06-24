@@ -108,8 +108,13 @@ export async function PATCH(request: NextRequest) {
                 classification: profile?.classification ?? null,
                 iban: profile?.iban ?? null,
                 address: profile?.address ?? null,
+                imageUrl: profile?.imageUrl ?? updatedUser.imageUrl ?? null,
+                officialType: updatedUser.official?.officialType ?? null,
                 isApproved: updatedUser.isApproved,
                 isActive: updatedUser.isActive,
+                // Güvenlik alanları profil güncellemesinde kaybolmaması için eklendi
+                recoveryCode: updatedUser.recoveryCode ?? null,
+                securityQuestion: updatedUser.securityQuestion ?? null,
             },
         });
 

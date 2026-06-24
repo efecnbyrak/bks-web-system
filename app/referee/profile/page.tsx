@@ -72,6 +72,7 @@ export default async function RefereeProfileDashboard() {
 
             {/* Achievements Section */}
             <AchievementsSection maintenanceMode={achievementsInMaintenance} />
+            <br></br>
         </div>
     );
 }

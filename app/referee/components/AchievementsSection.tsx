@@ -65,7 +65,7 @@ const TIER_LABELS: Record<string, string> = {
     orta: "Orta Seviye",
     ileri: "İleri Seviye",
     uzman: "Uzman",
-    master: "Uzman Pro",
+    master: "İleri Uzman",
     legend: "Şampiyon",
 };
 
@@ -391,7 +391,6 @@ function RankTimeline({ currentXP }: { currentXP: number }) {
                     <span className="text-[10px] text-zinc-500 font-medium">XP</span>
                 </div>
             </div>
-
             {/* Timeline */}
             <div className="relative overflow-x-auto pb-2 modern-scrollbar">
                 <div className="flex items-start min-w-max mx-auto px-2" style={{ minWidth: "560px" }}>

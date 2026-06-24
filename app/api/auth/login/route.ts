@@ -168,6 +168,9 @@ export async function POST(request: NextRequest) {
             officialType: user.official?.officialType ?? null,
             isApproved: user.isApproved,
             isActive: user.isActive,
+            // Güvenlik sorusu ve kurtarma kodu profil ekranında gösterilmesi için eklendi
+            recoveryCode: user.recoveryCode ?? null,
+            securityQuestion: user.securityQuestion ?? null,
         };
 
         return NextResponse.json({

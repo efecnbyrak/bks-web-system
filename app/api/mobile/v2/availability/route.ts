@@ -93,6 +93,7 @@ export async function GET(request: NextRequest) {
                 phone: profile.phone || "",
                 regions: profile.regions.map((r: any) => r.name),
                 classification: profile.classification || null,
+                officialType: profile.officialType || null,
                 isOfficial,
             },
             existingForm: existingForm

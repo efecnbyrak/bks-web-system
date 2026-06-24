@@ -77,6 +77,7 @@ export async function GET(request: NextRequest) {
                 isApproved: user.isApproved,
                 isActive: user.isActive,
                 recoveryCode: user.recoveryCode ?? null,
+                securityQuestion: user.securityQuestion ?? null,
             },
         });
 
