@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
             const referees = await db.referee.findMany({
                 where: refWhere,
                 include: {
-                    availabilityForms: {
+                    forms: {
                         where: { weekStartDate: weekStart },
                         include: { days: true },
                     },
@@ -59,7 +59,7 @@ export async function GET(req: NextRequest) {
                 : referees;
 
             const result = filtered.map((r) => {
-                const form = r.availabilityForms[0] ?? null;
+                const form = r.forms[0] ?? null;
                 const dayMap = new Map(form?.days.map((d) => [d.date.toISOString().split("T")[0], d.slots]) ?? []);
                 return {
                     userId: r.userId,
@@ -83,7 +83,7 @@ export async function GET(req: NextRequest) {
             const officials = await db.generalOfficial.findMany({
                 where: offWhere,
                 include: {
-                    availabilityForms: {
+                    forms: {
                         where: { weekStartDate: weekStart },
                         include: { days: true },
                     },
@@ -97,7 +97,7 @@ export async function GET(req: NextRequest) {
                 : officials;
 
             const result = filtered.map((o) => {
-                const form = o.availabilityForms[0] ?? null;
+                const form = o.forms[0] ?? null;
                 const dayMap = new Map(form?.days.map((d) => [d.date.toISOString().split("T")[0], d.slots]) ?? []);
                 return {
                     userId: o.userId,
