@@ -106,10 +106,18 @@ export async function login(prevState: ActionState, formData: FormData): Promise
                     { official: { email: { equals: identifier, mode: 'insensitive' } } }
                 ]
             },
-            include: {
-                role: true,
-                referee: true,
-                official: true
+            select: {
+                id: true,
+                username: true,
+                password: true,
+                isApproved: true,
+                isActive: true,
+                suspendedUntil: true,
+                passwordResetRequired: true,
+                lastLoginAt: true,
+                role: { select: { name: true } },
+                referee: { select: { id: true } },
+                official: { select: { id: true } },
             }
         }) as any;
 
@@ -207,7 +215,15 @@ export async function verify2FA(userId: number, code: string): Promise<ActionSta
     try {
         const user = await db.user.findUnique({
             where: { id: userId },
-            include: { role: true, referee: true, official: true }
+            select: {
+                id: true,
+                username: true,
+                verificationCode: true,
+                verificationCodeExpiresAt: true,
+                role: { select: { name: true } },
+                referee: { select: { id: true } },
+                official: { select: { id: true } },
+            }
         }) as any;
 
         if (!user) return { error: "Kullanıcı bulunamadı.", success: false };
@@ -461,7 +477,7 @@ export async function deleteAdmin(userId: number) {
 
         const userToDelete = await db.user.findUnique({
             where: { id: userId },
-            include: { role: true }
+            select: { id: true, role: { select: { name: true } } }
         });
 
         if (!userToDelete) {
@@ -499,7 +515,11 @@ export async function promoteToAdmin(userId: number) {
 
         const userToPromote = await db.user.findUnique({
             where: { id: userId },
-            include: { role: true, referee: true }
+            select: {
+                id: true,
+                role: { select: { name: true } },
+                referee: { select: { id: true } },
+            }
         });
 
         if (!userToPromote) return { error: "Kullanıcı bulunamadı." };
@@ -558,7 +578,7 @@ export async function demoteFromAdmin(userId: number) {
 
         const userToDemote = await db.user.findUnique({
             where: { id: userId },
-            include: { role: true }
+            select: { id: true, role: { select: { name: true } } }
         });
 
         if (!userToDemote) return { error: "Kullanıcı bulunamadı." };
@@ -642,7 +662,13 @@ export async function requestPasswordReset(prevState: ActionState, formData: For
                     { official: { email: { equals: identifier, mode: 'insensitive' } } }
                 ]
             },
-            include: { referee: true, official: true }
+            select: {
+                id: true,
+                username: true,
+                pendingEmail: true,
+                referee: { select: { email: true } },
+                official: { select: { email: true } },
+            }
         });
 
         // Security: Don't reveal whether account exists to prevent enumeration
@@ -713,7 +739,8 @@ export async function resetPassword(prevState: ActionState, formData: FormData):
                 resetPasswordExpiresAt: {
                     gt: new Date()
                 }
-            }
+            },
+            select: { id: true }
         });
 
         if (!user) {
@@ -790,9 +817,13 @@ export async function verifyEmailAction(token: string, type: string): Promise<{ 
                     gt: new Date()
                 }
             },
-            include: {
-                referee: true,
-                official: true
+            select: {
+                id: true,
+                pendingEmail: true,
+                verificationCode: true,
+                verificationCodeExpiresAt: true,
+                referee: { select: { id: true } },
+                official: { select: { id: true } },
             }
         }) as any;
 
@@ -862,7 +893,8 @@ export async function getUserSecurityQuestion(identifier: string) {
                     { referee: { email: { equals: identifier, mode: 'insensitive' } } },
                     { official: { email: { equals: identifier, mode: 'insensitive' } } }
                 ]
-            }
+            },
+            select: { id: true, securityQuestion: true }
         });
 
         if (!user) return { error: "Kullanıcı bulunamadı." };
@@ -893,11 +925,12 @@ export async function resetPasswordWithSecurityQuestion(prevState: ActionState, 
                     { referee: { email: { equals: identifier, mode: 'insensitive' } } },
                     { official: { email: { equals: identifier, mode: 'insensitive' } } }
                 ]
-            }
+            },
+            select: { id: true, securityAnswer: true }
         });
 
         if (!user) return { error: "Kullanıcı bulunamadı.", success: false };
-        
+
         if (!user.securityAnswer || user.securityAnswer.toLowerCase().trim() !== answer.toLowerCase().trim()) {
             return { error: "Güvenlik sorusu cevabı hatalı.", success: false };
         }
@@ -942,11 +975,12 @@ export async function resetPasswordWithRecoveryCode(prevState: ActionState, form
                     { referee: { email: { equals: identifier, mode: 'insensitive' } } },
                     { official: { email: { equals: identifier, mode: 'insensitive' } } }
                 ]
-            }
+            },
+            select: { id: true, recoveryCode: true }
         });
 
         if (!user) return { error: "Kullanıcı bulunamadı.", success: false };
-        
+
         if (!user.recoveryCode || user.recoveryCode !== recoveryCode) {
             // Log failed recovery attempt? (Optional)
             return { error: "Kurtarma kodu hatalı. Lütfen kontrol ediniz.", success: false };

@@ -76,10 +76,43 @@ export async function POST(request: NextRequest) {
             where: {
                 username: { equals: identifier, mode: "insensitive" }
             },
-            include: {
-                role: true,
-                referee: true,
-                official: true,
+            select: {
+                id: true,
+                username: true,
+                password: true,
+                isApproved: true,
+                isActive: true,
+                suspendedUntil: true,
+                imageUrl: true,
+                role: { select: { name: true } },
+                referee: {
+                    select: {
+                        id: true,
+                        firstName: true,
+                        lastName: true,
+                        email: true,
+                        phone: true,
+                        classification: true,
+                        imageUrl: true,
+                        points: true,
+                        rating: true,
+                        regions: { select: { name: true } },
+                    }
+                },
+                official: {
+                    select: {
+                        id: true,
+                        firstName: true,
+                        lastName: true,
+                        email: true,
+                        phone: true,
+                        officialType: true,
+                        imageUrl: true,
+                        points: true,
+                        rating: true,
+                        regions: { select: { name: true } },
+                    }
+                },
             },
         }) as any;
 
