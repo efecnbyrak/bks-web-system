@@ -21,41 +21,46 @@ export type QuotaResult =
  * - Otomatik yenileme (manualRefresh=false) bu fonksiyonu hiç çağırmaz
  */
 export async function checkAndIncrementRefreshQuota(userId: number): Promise<QuotaResult> {
-    const user = await db.user.findUnique({
-        where: { id: userId },
-        select: { matchRefreshQuota: true },
-    });
+    try {
+        const user = await db.user.findUnique({
+            where: { id: userId },
+            select: { matchRefreshQuota: true },
+        });
 
-    const now = Date.now();
-    const raw = user?.matchRefreshQuota as unknown as QuotaData | null;
+        const now = Date.now();
+        const raw = user?.matchRefreshQuota as unknown as QuotaData | null;
 
-    let count = raw?.count ?? 0;
-    let windowStart = raw?.windowStart ? new Date(raw.windowStart).getTime() : now;
-    const windowAge = now - windowStart;
+        let count = raw?.count ?? 0;
+        let windowStart = raw?.windowStart ? new Date(raw.windowStart).getTime() : now;
+        const windowAge = now - windowStart;
 
-    // Pencere 5 dk geçtiyse sıfırla
-    if (windowAge >= WINDOW_MS) {
-        count = 0;
-        windowStart = now;
-    }
+        // Pencere 5 dk geçtiyse sıfırla
+        if (windowAge >= WINDOW_MS) {
+            count = 0;
+            windowStart = now;
+        }
 
-    if (count >= MAX_MANUAL) {
-        const retryAfterMs = Math.max(0, WINDOW_MS - (now - windowStart));
-        return { allowed: false, retryAfterMs };
-    }
+        if (count >= MAX_MANUAL) {
+            const retryAfterMs = Math.max(0, WINDOW_MS - (now - windowStart));
+            return { allowed: false, retryAfterMs };
+        }
 
-    // İzin ver ve yeni sayacı kaydet
-    await db.user.update({
-        where: { id: userId },
-        data: {
-            matchRefreshQuota: {
-                count: count + 1,
-                windowStart: new Date(windowStart).toISOString(),
+        // İzin ver ve yeni sayacı kaydet
+        await db.user.update({
+            where: { id: userId },
+            data: {
+                matchRefreshQuota: {
+                    count: count + 1,
+                    windowStart: new Date(windowStart).toISOString(),
+                },
             },
-        },
-    });
+        });
 
-    return { allowed: true };
+        return { allowed: true };
+    } catch {
+        // Sütun eksikse veya başka bir DB hatası varsa quota'yı geç, kullanıcıyı engelleme
+        return { allowed: true };
+    }
 }
 
 /**
@@ -66,23 +71,28 @@ export async function getRefreshQuotaStatus(userId: number): Promise<{
     remaining: number;
     retryAfterMs: number;
 }> {
-    const user = await db.user.findUnique({
-        where: { id: userId },
-        select: { matchRefreshQuota: true },
-    });
+    try {
+        const user = await db.user.findUnique({
+            where: { id: userId },
+            select: { matchRefreshQuota: true },
+        });
 
-    const now = Date.now();
-    const raw = user?.matchRefreshQuota as unknown as QuotaData | null;
+        const now = Date.now();
+        const raw = user?.matchRefreshQuota as unknown as QuotaData | null;
 
-    let count = raw?.count ?? 0;
-    let windowStart = raw?.windowStart ? new Date(raw.windowStart).getTime() : now;
+        let count = raw?.count ?? 0;
+        let windowStart = raw?.windowStart ? new Date(raw.windowStart).getTime() : now;
 
-    if (now - windowStart >= WINDOW_MS) {
-        count = 0;
+        if (now - windowStart >= WINDOW_MS) {
+            count = 0;
+        }
+
+        const remaining = Math.max(0, MAX_MANUAL - count);
+        const retryAfterMs = remaining > 0 ? 0 : Math.max(0, WINDOW_MS - (now - windowStart));
+
+        return { remaining, retryAfterMs };
+    } catch {
+        // Sütun eksikse tam quota ile devam et
+        return { remaining: MAX_MANUAL, retryAfterMs: 0 };
     }
-
-    const remaining = Math.max(0, MAX_MANUAL - count);
-    const retryAfterMs = remaining > 0 ? 0 : Math.max(0, WINDOW_MS - (now - windowStart));
-
-    return { remaining, retryAfterMs };
 }
